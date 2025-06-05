@@ -13,16 +13,23 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/1566837/pexels-photo-1566837.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.pizza,
+      size: ProductSize.mediano,
       ingredients: [
         'Tomate',
         'Mozzarella',
         'Albahaca Fresca',
         'Aceite de Oliva',
       ],
+      basePossibleIngredients: [
+        'Extra Queso',
+        'Jamón',
+        'Pimiento',
+      ], // <-- AÑADIDO
       rating: 4.5,
       reviewCount: 120,
       isFeatured: true,
       isPopular: true,
+      isFavorite: false,
     ),
     ProductModel(
       id: 'pizza002',
@@ -33,15 +40,18 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/2619967/pexels-photo-2619967.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.pizza,
+      size: ProductSize.grande,
       ingredients: [
         'Pepperoni',
         'Mozzarella',
         'Salsa de Tomate Picante',
         'Chili en Polvo',
       ],
+      basePossibleIngredients: ['Pepperoni', 'Chili', 'Mozzarella'],
       rating: 4.7,
       reviewCount: 95,
       isPopular: true,
+      // isFavorite: false,
     ),
     ProductModel(
       id: 'pizza003',
@@ -52,6 +62,7 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/3764990/pexels-photo-3764990.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.pizza,
+      size: ProductSize.extraGrande,
       ingredients: [
         'Pimiento Rojo',
         'Pimiento Verde',
@@ -60,9 +71,11 @@ class MockData {
         'Aceitunas Negras',
         'Mozzarella',
       ],
+      basePossibleIngredients: ['Aceitunas', 'Cebolla', 'Champiñones'],
       rating: 4.3,
       reviewCount: 70,
       isFeatured: true,
+      // isFavorite: false,
     ),
 
     // --- HAMBURGUESAS ---
@@ -75,6 +88,7 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/1639557/pexels-photo-1639557.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.burger,
+      size: ProductSize.pequeno,
       ingredients: [
         'Carne de Res',
         'Queso Cheddar',
@@ -84,10 +98,12 @@ class MockData {
         'Salsa Especial',
         'Pan Brioche',
       ],
+      basePossibleIngredients: ['Carne Res', 'Cheddar', 'lechuga'],
       rating: 4.6,
       reviewCount: 150,
       isFeatured: true,
       isPopular: true,
+      // isFavorite: false,
     ),
     ProductModel(
       id: 'burger002',
@@ -98,6 +114,7 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/2983101/pexels-photo-2983101.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.burger,
+      size: ProductSize.extraGrande,
       ingredients: [
         'Carne de Res',
         'Bacon Crujiente',
@@ -106,9 +123,11 @@ class MockData {
         'Salsa BBQ',
         'Pan Artesanal',
       ],
+      basePossibleIngredients: ['Carne Res', 'Queso Suizo', 'Salsa BBQ'],
       rating: 4.8,
       reviewCount: 110,
       isPopular: true,
+      isFavorite: false,
     ),
     ProductModel(
       id: 'burger003',
@@ -119,6 +138,7 @@ class MockData {
       imageUrl:
           'https://images.pexels.com/photos/2725744/pexels-photo-2725744.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
       category: ProductCategory.burger,
+      size: ProductSize.grande,
       ingredients: [
         'Pechuga de Pollo Crispy',
         'Mayonesa de Ajo',
@@ -126,8 +146,10 @@ class MockData {
         'Tomate',
         'Pan con Sésamo',
       ],
+      basePossibleIngredients: ['Pechuga', 'Mayonesa Ajo', 'Salsa BBQ'],
       rating: 4.4,
       reviewCount: 80,
+      // isFavorite: false,
     ),
     // Puedes añadir más productos de cada categoría o incluso de nuevas categorías (bebidas, postres)
   ];

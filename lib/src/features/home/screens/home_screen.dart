@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/services.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:food_app_portfolio/src/constants/app_colors.dart';
 import '../../../data/mock_data.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/models/category_model.dart';
@@ -11,6 +12,7 @@ import '../../products/screens/product_detail_screen.dart';
 import '../../../services/cart_service.dart'; // <-- Importa CartService
 import '../../cart/screens/cart_screen.dart'; // <-- Importaremos esto pronto
 import '../../../data/models/cart_item_model.dart';
+import '../../../constants/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   final CartService cartService; // <-- Añade cartService
@@ -296,15 +298,100 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildSectionTitle(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    String titleText = _selectedCategory == null
+        ? 'Todos los Productos'
+        : _categories
+              .firstWhere(
+                (c) => c.type == _selectedCategory,
+                orElse: () => CategoryModel(
+                  id: '',
+                  name: 'Productos',
+                  type: ProductCategory.pizza,
+                ),
+              )
+              .name;
+    // El orElse es por si acaso, aunque no debería pasar si _categories está bien.
+
+    IconData sectionIcon =
+        Icons.list_alt_rounded; // Icono por defecto para "Todos"
+    if (_selectedCategory != null) {
+      switch (_selectedCategory!) {
+        // Usamos ! porque ya comprobamos que no es null
+        case ProductCategory.pizza:
+          sectionIcon = Icons.local_pizza_rounded;
+          break;
+        case ProductCategory.burger:
+          sectionIcon = Icons.lunch_dining_rounded;
+          break;
+        // Añade más casos para otras categorías si las tienes
+        default:
+          sectionIcon = Icons.fastfood_rounded;
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      decoration: BoxDecoration(
+        color: colorScheme.primary, // Fondo naranja
+        borderRadius: BorderRadius.circular(12.0), // Bordes redondeados
+        boxShadow: [
+          BoxShadow(
+            color: colorScheme.primary.withOpacity(0.4),
+            blurRadius: 8,
+            offset: Offset(0, 4), // Sombra hacia abajo
+          ),
+          BoxShadow(
+            // Sombra interna sutil para efecto de profundidad (opcional)
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 1,
+            spreadRadius: 1,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize:
+            MainAxisSize.min, // Para que el contenedor no ocupe todo el ancho
+        children: [
+          Icon(
+            sectionIcon,
+            color: AppColors.textOnPrimary, // Icono blanco
+            size: 22,
+          ),
+          SizedBox(width: 10),
+          Text(
+            titleText,
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.textOnPrimary, // Texto blanco
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(
-      context,
-    ).colorScheme; // También útil, puedes añadirla si no está
+    // final colorScheme = Theme.of(
+    //   context,
+    // ).colorScheme; // También útil, puedes añadirla si no está
     return Scaffold(
       appBar: AppBar(
-        title: Text('Paradise Fast Food'),
+        title: Text('Fast Food Paradise'),
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+        backgroundColor: AppColors.primary,
+
         actions: [
           // Widget para mostrar el número de ítems en el carrito
           ValueListenableBuilder<List<CartItemModel>>(
@@ -313,7 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
               int itemCount = widget.cartService.totalItemsCount;
               if (itemCount == 0) {
                 return IconButton(
-                  icon: Icon(Icons.shopping_cart_outlined),
+                  icon: Icon(Icons.shopping_cart_outlined, color: Colors.white),
                   onPressed: _navigateToCartScreen,
                 );
               }
@@ -323,6 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   IconButton(
                     icon: Icon(
                       Icons.shopping_cart,
+                      color: Colors.white,
                     ), // Icono relleno si hay ítems
                     onPressed: _navigateToCartScreen,
                   ),
@@ -333,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color: Colors.red,
+                          color: Colors.green,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         constraints: BoxConstraints(
@@ -354,30 +442,13 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Column(
-        // Envolvemos todo en una Column
-        crossAxisAlignment:
-            CrossAxisAlignment.start, // Para alinear el título de "Productos"
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildCategorySelector(), // Añadimos el selector de categorías
-          _buildPopularProductsCarousel(), // Añadimos el carrusel de populares
-          // Título para la lista principal de productos
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Text(
-              _selectedCategory == null
-                  ? 'Todos los Productos'
-                  // Aquí usamos textTheme, así que debe estar definido
-                  : _categories
-                        .firstWhere((c) => c.type == _selectedCategory)
-                        .name,
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ), // <--- Aquí se usa
-            ),
-          ),
+          _buildCategorySelector(),
+          _buildPopularProductsCarousel(),
+
+          // --- TÍTULO DE SECCIÓN ESTILIZADO ---
+          _buildSectionTitle(context),
 
           Expanded(
             // ListView.builder necesita estar en un Expanded dentro de Column
@@ -392,17 +463,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8.0,
-                      vertical: 4.0,
-                    ), // Ajusta padding
+                : GridView.builder(
+                    padding: const EdgeInsets.all(
+                      16.0,
+                    ), // Padding alrededor de toda la cuadrícula
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2, // Dos columnas
+                      crossAxisSpacing:
+                          16.0, // Espacio horizontal entre tarjetas
+                      mainAxisSpacing: 16.0, // Espacio vertical entre tarjetas
+                      childAspectRatio:
+                          0.75, // Proporción Ancho/Alto de cada celda. ¡AJUSTA ESTO! (ej: 0.7, 0.8)
+                    ),
                     itemCount: _displayedProducts.length,
                     itemBuilder: (BuildContext context, int index) {
                       final product = _displayedProducts[index];
-                      // Asegúrate de que el tag de Hero aquí sea diferente al del carrusel si el producto puede estar en ambos
-                      // Si ProductCard ya tiene Hero, no necesitas otro aquí.
-                      // Pero si el producto popular usa un Hero con tag diferente, está bien.
                       return ProductCard(
                         product: product,
                         onAddToCart: () => _handleAddToCart(product),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/services.dart'; // Para HapticFeedback
 import 'package:flutter_rating_bar/flutter_rating_bar.dart'; // <-- Importa flutter_rating_bar
+import 'package:food_app_portfolio/src/constants/app_colors.dart';
 import '../../../data/models/product_model.dart'; // Importa tu ProductModel
 // Importa tus colores y estilos si los necesitas directamente
 // import '../../../constants/app_colors.dart';
@@ -42,6 +43,7 @@ class ProductDetailScreen extends StatelessWidget {
           'También te podría gustar',
           style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
+
         SizedBox(height: 12),
         Container(
           height:
@@ -57,12 +59,10 @@ class ProductDetailScreen extends StatelessWidget {
               // Para un mejor control, podríamos crear una `RelatedProductCard`.
               // Envolvemos ProductCard en un SizedBox para darle un ancho.
               return SizedBox(
-                width:
-                    MediaQuery.of(context).size.width *
-                    0.55, // Ancho de cada tarjeta relacionada
+                width: 300,
                 child: Padding(
                   padding: const EdgeInsets.only(
-                    right: 12.0,
+                    right: 1,
                   ), // Espacio entre tarjetas
                   child: ProductCard(
                     // Reutilizamos ProductCard
@@ -133,7 +133,7 @@ class ProductDetailScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12.0),
                   child: Image.network(
                     product.imageUrl,
-                    height: 250, // O un tamaño más adaptable
+                    height: 200, // O un tamaño más adaptable
                     fit: BoxFit.cover,
                     // Puedes añadir loadingBuilder y errorBuilder aquí también
                   ),

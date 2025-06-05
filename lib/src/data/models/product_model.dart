@@ -7,6 +7,8 @@ enum ProductCategory {
   side, // Acompañamientos
 }
 
+enum ProductSize { pequeno, mediano, grande, extraGrande }
+
 class ProductModel {
   final String id;
   final String name;
@@ -14,11 +16,14 @@ class ProductModel {
   final double price;
   final String imageUrl;
   final ProductCategory category;
-  final List<String> ingredients;
+  final List<String> ingredients; // Lista específica del producto
+  final ProductSize size; // <-- NUEVO CAMPO
+  final List<String> basePossibleIngredients; // <-- NUEVO CAMPO
   final double rating;
   final int reviewCount;
   final bool isFeatured;
   final bool isPopular;
+  bool isFavorite;
 
   ProductModel({
     required this.id,
@@ -27,12 +32,30 @@ class ProductModel {
     required this.price,
     required this.imageUrl,
     required this.category,
+    required this.size,
     this.ingredients = const [],
+    this.basePossibleIngredients = const [],
     this.rating = 0.0,
     this.reviewCount = 0,
     this.isFeatured = false,
     this.isPopular = false,
+    this.isFavorite = false,
   });
+
+  String get sizeText {
+    switch (size) {
+      case ProductSize.pequeno:
+        return 'Pequeño';
+      case ProductSize.mediano:
+        return 'Mediano';
+      case ProductSize.grande:
+        return 'Grande';
+      case ProductSize.extraGrande:
+        return 'Extra Grande';
+      default:
+        return '';
+    }
+  }
 
   // Método para convertir una instancia de ProductModel a un Map (útil para BBDD o JSON)
   // No lo usaremos mucho ahora, pero es buena práctica tenerlo.
@@ -44,6 +67,7 @@ class ProductModel {
       'price': price,
       'imageUrl': imageUrl,
       'category': category.toString(), // Convertir enum a string
+      'size': size,
       'ingredients': ingredients,
       'rating': rating,
       'reviewCount': reviewCount,
@@ -65,6 +89,7 @@ class ProductModel {
         (e) => e.toString() == map['category'],
         orElse: () => ProductCategory.pizza,
       ), // Valor por defecto si no se encuentra
+      size: map['size'],
       ingredients: List<String>.from(map['ingredients'] ?? []),
       rating: map['rating']?.toDouble() ?? 0.0,
       reviewCount: map['reviewCount']?.toInt() ?? 0,
