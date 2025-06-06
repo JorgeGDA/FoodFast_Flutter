@@ -37,6 +37,8 @@ class _MainNavigatorState extends State<MainNavigator> {
         cartService: widget.cartService,
         navigateToCartTab: () =>
             navigateToTab(2), // 2 es el índice de CartScreen
+        navigateToProfileTab: () =>
+            navigateToTab(3), // 3 es el índice de ProfileScreen
       ),
       FavoritesScreen(),
       // Pasamos la función navigateToTab a CartScreen

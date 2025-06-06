@@ -12,16 +12,18 @@ import '../../products/screens/product_detail_screen.dart';
 import '../../../services/cart_service.dart'; // <-- Importa CartService
 import '../../cart/screens/cart_screen.dart'; // <-- Importaremos esto pronto
 import '../../../data/models/cart_item_model.dart';
-import '../../../constants/app_colors.dart';
+import 'package:food_app_portfolio/src/features/profile/screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final CartService cartService; // <-- Añade cartService
   final VoidCallback navigateToCartTab; // Nueva función
+  final VoidCallback navigateToProfileTab; // <--- NUEVA PROPIEDAD
 
   const HomeScreen({
     Key? key,
     required this.cartService,
     required this.navigateToCartTab,
+    required this.navigateToProfileTab,
   }) : super(key: key); // <-- Actualiza constructor
 
   @override
@@ -45,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<CategoryModel> _categories =
       mockCategories; // Usamos las de category_model.dart
-
+  static const String _userAvatarPath = "assets/images/valentina.jpg";
   @override
   void dispose() {
     _searchController.dispose(); // Desechar el controlador
@@ -159,6 +161,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _navigateToCartScreen() {
     // En lugar de Navigator.push, llama a la función para cambiar de pestaña
     widget.navigateToCartTab();
+  }
+
+  void _navigateToProfileScreen() {
+    widget.navigateToProfileTab();
   }
 
   Widget _buildAdvancedFilters() {
@@ -738,60 +744,117 @@ class _HomeScreenState extends State<HomeScreen> {
     // ).colorScheme; // También útil, puedes añadirla si no está
     return Scaffold(
       appBar: AppBar(
-        title: Text('Fast Food Paradise'),
-        titleTextStyle: TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        // title: Text('Fast Food Paradise'), // El título se mantendrá si no pones `leading` explícito
+        // Si quieres que el título esté a la izquierda y los iconos a la derecha,
+        // el título no necesita estar en `leading`. `AppBar` lo maneja bien.
+        // El titleTextStyle y backgroundColor ya deberían venir del tema global.
         backgroundColor: AppColors.primary,
+        // Si quieres un título explícito y centrado diferente, puedes usar:
+        // centerTitle: true, // Opcional, si quieres centrar el título
+        title: Text(
+          'Fast Food Paradise',
+          // No necesitas especificar color aquí si tu AppBarTheme está bien configurado
+          style: TextStyle(
+            color: AppColors.textOnPrimary,
+            // fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
+        elevation: 4.0, // Sutil sombra para el AppBar
 
         actions: [
-          // Widget para mostrar el número de ítems en el carrito
+          // --- 1. ICONO DEL CARRITO (como lo tenías) ---
           ValueListenableBuilder<List<CartItemModel>>(
             valueListenable: widget.cartService.itemsNotifier,
             builder: (context, items, child) {
               int itemCount = widget.cartService.totalItemsCount;
-              if (itemCount == 0) {
-                return IconButton(
-                  icon: Icon(Icons.shopping_cart_outlined, color: Colors.white),
-                  onPressed: _navigateToCartScreen,
-                );
-              }
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.shopping_cart,
-                      color: Colors.white,
-                    ), // Icono relleno si hay ítems
-                    onPressed: _navigateToCartScreen,
-                  ),
-                  if (itemCount > 0)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(8),
+              return Center(
+                // Center para alinear verticalmente el badge
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    right: 2.0,
+                  ), // Espacio antes del avatar
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          itemCount == 0
+                              ? Icons.shopping_cart_outlined
+                              : Icons.shopping_cart,
+                          color: AppColors
+                              .textOnPrimary, // El color debería venir del AppBarTheme
                         ),
-                        constraints: BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          '$itemCount',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                          textAlign: TextAlign.center,
-                        ),
+                        onPressed: _navigateToCartScreen,
+                        tooltip: 'Ver Carrito',
                       ),
-                    ),
-                ],
+                      if (itemCount > 0)
+                        Positioned(
+                          right: 6, // Ajusta para el badge
+                          top: 6, // Ajusta para el badge
+                          child: Container(
+                            padding: EdgeInsets.all(
+                              itemCount > 9 ? 3 : 4,
+                            ), // Más padding si son 2 dígitos
+                            decoration: BoxDecoration(
+                              color: Colors
+                                  .green, // Un color que resalte para el badge
+                              shape: BoxShape.circle,
+                              // borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: AppColors.surface,
+                                width: 1.0,
+                              ), // Borde blanco
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              '$itemCount',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               );
             },
+          ),
+
+          // --- 2. FOTO DE PERFIL CIRCULAR ---
+          Padding(
+            padding: const EdgeInsets.only(
+              right: 16.0,
+              top: 6.0,
+              bottom: 6.0,
+            ), // Espaciado para el avatar
+            child: InkWell(
+              onTap: _navigateToProfileScreen,
+              customBorder: CircleBorder(), // Para que el ripple sea circular
+              child: Container(
+                // padding: const EdgeInsets.all(
+                //   1.0,
+                // ), // Espacio para el borde/sombra si el avatar es pequeño
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surface, width: 2.0),
+                ),
+                child: CircleAvatar(
+                  radius: 20, // Tamaño del avatar en el AppBar
+                  backgroundImage: AssetImage(_userAvatarPath),
+
+                  // Puedes añadir un backgroundColor por si la imagen tarda o falla
+                  backgroundColor: AppColors.background.withOpacity(0.5),
+                ),
+              ),
+            ),
           ),
         ],
       ),
