@@ -10,8 +10,13 @@ import '../../../common_widgets/quantity_selector.dart';
 class CartScreen extends StatelessWidget {
   // Podría ser StatefulWidget para manejar rebuilds locales
   final CartService cartService;
+  final VoidCallback navigateToHome;
 
-  const CartScreen({Key? key, required this.cartService}) : super(key: key);
+  const CartScreen({
+    Key? key,
+    required this.cartService,
+    required this.navigateToHome,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -25,10 +30,10 @@ class CartScreen extends StatelessWidget {
         return Scaffold(
           appBar: AppBar(
             title: Text('Mi Carrito (${cartService.totalItemsCount})'),
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
+            // leading: IconButton(
+            //   icon: Icon(Icons.arrow_back_ios_new),
+            //   onPressed: () => Navigator.of(context).pop(),
+            // ),
             actions: [
               if (cartItems.isNotEmpty)
                 IconButton(
@@ -89,10 +94,20 @@ class CartScreen extends StatelessWidget {
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 30),
-                      ElevatedButton(
-                        onPressed: () =>
-                            Navigator.of(context).pop(), // Volver a la home
-                        child: Text('Explorar Menú'),
+                      ElevatedButton.icon(
+                        icon: Icon(Icons.restaurant_menu),
+                        label: Text('Explorar Menú'),
+                        onPressed:
+                            navigateToHome, // <-- ¡USA LA FUNCIÓN PASADA!
+                        style: ElevatedButton.styleFrom(
+                          // backgroundColor: Theme.of(context).colorScheme.primary, // Color primario
+                          // foregroundColor: Theme.of(context).colorScheme.onPrimary, // Texto sobre primario
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          textStyle: textTheme.labelLarge,
+                        ),
                       ),
                     ],
                   ),

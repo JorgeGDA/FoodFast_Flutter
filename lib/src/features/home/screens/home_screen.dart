@@ -16,9 +16,13 @@ import '../../../constants/app_colors.dart';
 
 class HomeScreen extends StatefulWidget {
   final CartService cartService; // <-- Añade cartService
+  final VoidCallback navigateToCartTab; // Nueva función
 
-  const HomeScreen({Key? key, required this.cartService})
-    : super(key: key); // <-- Actualiza constructor
+  const HomeScreen({
+    Key? key,
+    required this.cartService,
+    required this.navigateToCartTab,
+  }) : super(key: key); // <-- Actualiza constructor
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -32,10 +36,23 @@ class _HomeScreenState extends State<HomeScreen> {
   // Usaremos el enum ProductCategory para el estado de la categoría seleccionada
   ProductCategory? _selectedCategory; // Nullable para "Todos"
 
+  final TextEditingController _searchController = TextEditingController();
+  String _searchTerm = ''; // Para guardar el término de búsqueda actual
+
+  bool _showOnlyPopular = false; // Para el filtro de popularidad
+  String?
+  _sortBy; // Para el ordenamiento, ej: 'price_asc', 'price_desc', 'name_asc'
+
   final List<CategoryModel> _categories =
       mockCategories; // Usamos las de category_model.dart
 
   @override
+  void dispose() {
+    _searchController.dispose(); // Desechar el controlador
+    // widget.cartService.itemsNotifier.removeListener(_updateCartIcon); // Si tenías esto
+    super.dispose();
+  }
+
   void initState() {
     super.initState();
     _allProducts = MockData.products;
@@ -45,21 +62,58 @@ class _HomeScreenState extends State<HomeScreen> {
     _filterProducts(); // Llama al filtro inicial
   }
 
+  // Dentro de la clase _HomeScreenState
+
   void _filterProducts() {
-    if (_selectedCategory == null) {
-      _displayedProducts = List.from(_allProducts); // Mostrar todos
-    } else {
-      _displayedProducts = _allProducts
+    List<ProductModel> tempProducts = List.from(_allProducts);
+
+    // 1. Filtrar por categoría
+    if (_selectedCategory != null) {
+      tempProducts = tempProducts
           .where((product) => product.category == _selectedCategory)
           .toList();
     }
-    setState(() {}); // Actualizar la UI
+
+    // 2. Filtrar por "Solo Populares"
+    if (_showOnlyPopular) {
+      tempProducts = tempProducts
+          .where((product) => product.isPopular)
+          .toList();
+    }
+
+    // 3. Filtrar por término de búsqueda
+    if (_searchTerm.isNotEmpty) {
+      tempProducts = tempProducts.where((product) {
+        return product.name.toLowerCase().contains(_searchTerm.toLowerCase());
+      }).toList();
+    }
+
+    // 4. Ordenar los productos
+    if (_sortBy != null) {
+      tempProducts.sort((a, b) {
+        switch (_sortBy) {
+          case 'price_asc':
+            return a.price.compareTo(b.price);
+          case 'price_desc':
+            return b.price.compareTo(a.price);
+          case 'name_asc':
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          // Puedes añadir más casos de ordenamiento (ej. 'rating_desc')
+          default:
+            return 0;
+        }
+      });
+    }
+
+    _displayedProducts =
+        tempProducts; // Asignar la lista final filtrada y ordenada
+    setState(() {});
   }
 
   void _onCategorySelected(ProductCategory? category) {
     setState(() {
       _selectedCategory = category;
-      _filterProducts();
+      _filterProducts(); // Esto aplicará el filtro de categoría Y el filtro de búsqueda actual
     });
   }
 
@@ -103,11 +157,311 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateToCartScreen() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        // Pasaremos cartService a CartScreen
-        builder: (context) => CartScreen(cartService: widget.cartService),
+    // En lugar de Navigator.push, llama a la función para cambiar de pestaña
+    widget.navigateToCartTab();
+  }
+
+  Widget _buildAdvancedFilters() {
+    final colorScheme = Theme.of(context).colorScheme; // Obtener colorScheme
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 16.0,
+        vertical: 0.0,
+      ), // Menos padding vertical
+      child: Wrap(
+        // Usamos Wrap para que los filtros se ajusten si no caben en una línea
+        spacing: 8.0, // Espacio horizontal entre elementos del Wrap
+        runSpacing: 4.0, // Espacio vertical si hay múltiples líneas
+        alignment: WrapAlignment.start, // Alineación
+        children: <Widget>[
+          // --- Filtro de Popularidad (ToggleButton o Chip) ---
+          FilterChip(
+            label: Text(
+              'Populares',
+              style: TextStyle(
+                color: _showOnlyPopular
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurfaceVariant,
+              ),
+            ),
+            selected: _showOnlyPopular,
+            onSelected: (bool selected) {
+              setState(() {
+                _showOnlyPopular = selected;
+                _filterProducts();
+              });
+            },
+            avatar: Icon(
+              Icons.star_border_rounded,
+              size: 18,
+              color: _showOnlyPopular
+                  ? colorScheme.onPrimary
+                  : colorScheme.onSurfaceVariant.withOpacity(0.7),
+            ),
+            selectedColor: colorScheme.primary,
+            checkmarkColor: colorScheme.onPrimary,
+            backgroundColor: colorScheme.surfaceVariant.withOpacity(0.5),
+            shape: StadiumBorder(),
+          ),
+
+          // --- Menú Desplegable para Ordenamiento ---
+          PopupMenuButton<String>(
+            onSelected: (String value) {
+              setState(() {
+                if (value == 'clear_sort') {
+                  _sortBy = null; // Limpiar el ordenamiento
+                } else {
+                  _sortBy = value;
+                }
+                _filterProducts();
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: 'price_asc',
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_upward, size: 18),
+                    SizedBox(width: 8),
+                    Text('Precio (Menor)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'price_desc',
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_downward, size: 18),
+                    SizedBox(width: 8),
+                    Text('Precio (Mayor)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'name_asc',
+                child: Row(
+                  children: [
+                    Icon(Icons.sort_by_alpha, size: 18),
+                    SizedBox(width: 8),
+                    Text('Nombre (A-Z)'),
+                  ],
+                ),
+              ),
+              // Opción para limpiar el ordenamiento
+              if (_sortBy != null) ...[
+                PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'clear_sort', // Un valor especial para limpiar
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all, size: 18, color: Colors.redAccent),
+                      SizedBox(width: 8),
+                      Text('Limpiar Orden'),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+            child: Container(
+              // El widget que activa el PopupMenuButton
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceVariant.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20.0),
+                border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.sort_rounded,
+                    size: 18,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    _sortBy == null
+                        ? 'Ordenar por'
+                        : _sortBy == 'price_asc'
+                        ? 'Precio (Menor)'
+                        : _sortBy == 'price_desc'
+                        ? 'Precio (Mayor)'
+                        : 'Nombre (A-Z)', // Debería ser más genérico o reflejar el estado actual
+                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // Aquí podrías añadir más filtros (ej. un Slider para rango de precios)
+        ],
+      ),
+    );
+  }
+
+  // Dentro de la clase _HomeScreenState
+
+  Widget _buildSearchBarAndFilters() {
+    // Renombrado para mayor claridad
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Row(
+        children: <Widget>[
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.filter_list_rounded,
+              color: colorScheme.primary,
+              size: 28,
+            ), // Icono de filtro
+            tooltip: 'Ordenar y Filtrar', // Tooltip para accesibilidad
+            onSelected: (String value) {
+              setState(() {
+                if (value == 'clear_sort') {
+                  _sortBy = null;
+                } else if (value == 'toggle_popular') {
+                  // Nuevo caso para el toggle de populares
+                  _showOnlyPopular = !_showOnlyPopular;
+                } else {
+                  _sortBy =
+                      value; // Asumimos que otros valores son para ordenamiento
+                }
+                _filterProducts();
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              // Opción para Populares
+              CheckedPopupMenuItem<String>(
+                // Para mostrar un check si está activo
+                value: 'toggle_popular',
+                checked: _showOnlyPopular,
+                child: Text('Mostrar solo Populares'),
+              ),
+              PopupMenuDivider(), // Divisor
+              // Opciones de Ordenamiento
+              PopupMenuItem<String>(
+                value: 'price_asc',
+                enabled:
+                    _sortBy !=
+                    'price_asc', // Deshabilitar si ya está seleccionado
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_upward, size: 18),
+                    SizedBox(width: 8),
+                    Text('Precio (Menor)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'price_desc',
+                enabled: _sortBy != 'price_desc',
+                child: Row(
+                  children: [
+                    Icon(Icons.arrow_downward, size: 18),
+                    SizedBox(width: 8),
+                    Text('Precio (Mayor)'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'name_asc',
+                enabled: _sortBy != 'name_asc',
+                child: Row(
+                  children: [
+                    Icon(Icons.sort_by_alpha, size: 18),
+                    SizedBox(width: 8),
+                    Text('Nombre (A-Z)'),
+                  ],
+                ),
+              ),
+              if (_sortBy != null) ...[
+                // Solo mostrar si hay un ordenamiento activo
+                PopupMenuDivider(),
+                PopupMenuItem<String>(
+                  value: 'clear_sort',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all, size: 18, color: Colors.redAccent),
+                      SizedBox(width: 8),
+                      Text('Limpiar Orden'),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12.0),
+            ), // Bordes redondeados para el menú
+            offset: Offset(0, 40), // Desplazar el menú un poco hacia abajo
+          ),
+          // --- CAMPO DE BÚSQUEDA ---
+          Expanded(
+            // Para que el TextField ocupe el espacio disponible
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar Pizzas, Hamburguesas...',
+                prefixIcon: Icon(Icons.search, color: colorScheme.primary),
+                suffixIcon: _searchTerm.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(
+                          Icons.clear,
+                          color: Theme.of(context).colorScheme.secondary,
+                        ),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchTerm = '';
+                            _filterProducts(); // Volver a filtrar sin término de búsqueda
+                          });
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: AppColors.surface,
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 20,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: BorderSide(
+                    color: AppColors.divider.withOpacity(0.5),
+                    width: 1,
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: BorderSide(
+                    color: colorScheme.primary,
+                    width: 1.5,
+                  ),
+                ),
+              ),
+              onChanged: (value) {
+                setState(() {
+                  _searchTerm = value;
+                  _filterProducts();
+                });
+              },
+            ),
+          ),
+          SizedBox(width: 10), // Espacio entre la búsqueda y el botón de filtro
+          // --- BOTÓN DE FILTRO (CON PopupMenuButton) ---
+        ],
       ),
     );
   }
@@ -441,51 +795,63 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildCategorySelector(),
-          _buildPopularProductsCarousel(),
+      body: CustomScrollView(
+        slivers: <Widget>[
+          // Cada widget que antes estaba en el Column ahora es un SliverToBoxAdapter
+          SliverToBoxAdapter(child: _buildCategorySelector()),
+          SliverToBoxAdapter(child: _buildPopularProductsCarousel()),
+          SliverToBoxAdapter(child: _buildSearchBarAndFilters()),
+          // SliverToBoxAdapter(
+          //   child: _buildAdvancedFilters(), // Si decides re-añadirlo
+          // ),
+          SliverToBoxAdapter(
+            child: _buildSectionTitle(context), // ¡Ahora esto se desplazará!
+          ),
 
-          // --- TÍTULO DE SECCIÓN ESTILIZADO ---
-          _buildSectionTitle(context),
-
-          Expanded(
-            // ListView.builder necesita estar en un Expanded dentro de Column
-            child: _displayedProducts.isEmpty
-                ? Center(
+          // Ahora, en lugar de Expanded(GridView.builder(...)), usamos SliverGrid
+          // o un mensaje si no hay productos.
+          _displayedProducts.isEmpty
+              ? SliverFillRemaining(
+                  // O SliverToBoxAdapter si prefieres un control más fino del tamaño
+                  hasScrollBody:
+                      false, // Importante si el child no es scrollable por sí mismo
+                  child: Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20.0),
                       child: Text(
-                        'No hay productos disponibles para esta categoría.',
-                        style: textTheme.titleMedium,
+                        'No hay productos que coincidan con tu búsqueda o filtros.',
+                        style: textTheme.titleMedium?.copyWith(
+                          color: Colors.grey[700],
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(
-                      16.0,
-                    ), // Padding alrededor de toda la cuadrícula
+                  ),
+                )
+              : SliverPadding(
+                  // Añade padding alrededor del Grid
+                  padding: const EdgeInsets.all(16.0),
+                  sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2, // Dos columnas
-                      crossAxisSpacing:
-                          16.0, // Espacio horizontal entre tarjetas
-                      mainAxisSpacing: 16.0, // Espacio vertical entre tarjetas
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
                       childAspectRatio:
-                          0.75, // Proporción Ancho/Alto de cada celda. ¡AJUSTA ESTO! (ej: 0.7, 0.8)
+                          0.75, // Ajusta según el contenido de tu ProductCard
                     ),
-                    itemCount: _displayedProducts.length,
-                    itemBuilder: (BuildContext context, int index) {
+                    delegate: SliverChildBuilderDelegate((
+                      BuildContext context,
+                      int index,
+                    ) {
                       final product = _displayedProducts[index];
                       return ProductCard(
                         product: product,
                         onAddToCart: () => _handleAddToCart(product),
                         onViewDetails: () => _handleViewDetails(product),
                       );
-                    },
+                    }, childCount: _displayedProducts.length),
                   ),
-          ),
+                ),
         ],
       ),
     );
