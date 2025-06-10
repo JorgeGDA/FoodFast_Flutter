@@ -113,7 +113,7 @@ flutter:
 flutter_launcher_icons:
   android: true # Generar iconos para Android
   ios: false # También puedes poner true si quieres generar para iOS, o false/quitarlo si solo es Android por ahora
-  image_path: "assets/images/icon1.png" # RUTA A TU ICONO PNG
+  image_path: "assets/images/icon2.png" # RUTA A TU ICONO PNG
   # Opcional: si quieres un icono adaptativo para Android (recomendado para Android 8.0+)
   adaptive_icon_background: "#FFFFFF" # Color de fondo para el icono adaptativo (ej. blanco) o ruta a una imagen de fondo
   # adaptive_icon_foreground: "assets/images/icon_foreground.png" # RUTA A TU ICONO PNG (la parte que se verá encima del fondo)

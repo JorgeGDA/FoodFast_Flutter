@@ -13,15 +13,18 @@ import '../../../services/cart_service.dart'; // <-- Importa CartService
 import '../../cart/screens/cart_screen.dart'; // <-- Importaremos esto pronto
 import '../../../data/models/cart_item_model.dart';
 import 'package:food_app_portfolio/src/features/profile/screens/profile_screen.dart';
+import 'package:food_app_portfolio/src/services/favorites_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final CartService cartService; // <-- Añade cartService
+  final FavoritesService favoritesService;
   final VoidCallback navigateToCartTab; // Nueva función
   final VoidCallback navigateToProfileTab; // <--- NUEVA PROPIEDAD
 
   const HomeScreen({
     Key? key,
     required this.cartService,
+    required this.favoritesService,
     required this.navigateToCartTab,
     required this.navigateToProfileTab,
   }) : super(key: key); // <-- Actualiza constructor
@@ -47,7 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<CategoryModel> _categories =
       mockCategories; // Usamos las de category_model.dart
-  static const String _userAvatarPath = "assets/images/valentina.jpg";
+  static const String _userAvatarPath = "assets/images/oahh.jpg";
   @override
   void dispose() {
     _searchController.dispose(); // Desechar el controlador
@@ -141,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // Usar PageRouteBuilder para transiciones personalizadas
         pageBuilder: (context, animation, secondaryAnimation) =>
             ProductDetailScreen(
+              favoritesService: widget.favoritesService,
               product: product,
               cartService: widget.cartService,
             ),
@@ -909,6 +913,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       final product = _displayedProducts[index];
                       return ProductCard(
                         product: product,
+                        // cartService: widget
+                        //     .cartService, // Si ProductCard aún lo necesita directamente
+                        favoritesService: widget.favoritesService,
                         onAddToCart: () => _handleAddToCart(product),
                         onViewDetails: () => _handleViewDetails(product),
                       );

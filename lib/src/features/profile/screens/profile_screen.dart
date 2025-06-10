@@ -15,7 +15,7 @@ class ProfileScreen extends StatelessWidget {
     const String userName = "Jorge Gomez HDA";
     const String userEmail = "Jorgeironhead07@gmail.com";
     const String localAvatarPath =
-        "assets/images/valentina.jpg"; // Placeholder con iniciales
+        "assets/images/oahh.jpg"; // Placeholder con iniciales
 
     return Scaffold(
       // El AppBar ya se configura globalmente por el tema en MyApp

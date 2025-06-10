@@ -5,7 +5,7 @@ import 'package:food_app_portfolio/src/constants/app_colors.dart';
 // Importa tu nuevo MainNavigator
 import 'package:food_app_portfolio/src/navigation/main_navigator.dart';
 import 'package:food_app_portfolio/src/services/cart_service.dart';
-
+import 'package:food_app_portfolio/src/services/favorites_service.dart';
 // Podríamos hacer MyApp StatefulWidget para mantener la instancia de CartService,
 // o usar un paquete de inyección de dependencias / servicio singleton más adelante.
 // Por ahora, una instancia global simple para el aprendizaje (no ideal para producción compleja).
@@ -13,13 +13,21 @@ import 'package:food_app_portfolio/src/services/cart_service.dart';
 void main() {
   // Inicializa CartService para que sea una única instancia global (o al menos a nivel de la app)
   final CartService cartService = CartService();
-  runApp(MyApp(cartService: cartService));
+  final FavoritesService favoritesService = FavoritesService(); // <--- NUEVO
+  runApp(
+    MyApp(cartService: cartService, favoritesService: favoritesService),
+  ); // <--- PASAR
 }
 
 class MyApp extends StatelessWidget {
   final CartService cartService;
+  final FavoritesService favoritesService; // <--- NUEVO
 
-  const MyApp({Key? key, required this.cartService}) : super(key: key);
+  const MyApp({
+    Key? key,
+    required this.cartService,
+    required this.favoritesService,
+  }) : super(key: key);
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -131,7 +139,10 @@ class MyApp extends StatelessWidget {
         // ... puedes añadir más temas para otros widgets (CardTheme, InputDecoratorTheme, etc.)
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MainNavigator(cartService: cartService), // <-- Pasa cartService
+      home: MainNavigator(
+        cartService: cartService,
+        favoritesService: favoritesService,
+      ), // <-- Pasa cartService
       debugShowCheckedModeBanner: false,
     );
   }

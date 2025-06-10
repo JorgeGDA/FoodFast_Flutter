@@ -1,227 +1,249 @@
 // lib/src/features/products/widgets/product_card.dart
 import 'package:flutter/material.dart';
-// import 'dart:math' as math; // Lo quitamos si no usamos ingredientes aleatorios por ahora
 import '../../../data/models/product_model.dart';
+import 'package:food_app_portfolio/src/services/favorites_service.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/app_text_styles.dart';
 
-class ProductCard extends StatefulWidget {
+class ProductCard extends StatelessWidget {
   final ProductModel product;
   final VoidCallback onAddToCart;
   final VoidCallback onViewDetails;
+  final FavoritesService favoritesService;
 
   const ProductCard({
     Key? key,
     required this.product,
     required this.onAddToCart,
     required this.onViewDetails,
+    required this.favoritesService,
   }) : super(key: key);
-
-  @override
-  _ProductCardState createState() => _ProductCardState();
-}
-
-class _ProductCardState extends State<ProductCard> {
-  late bool _isFavorite;
-
-  @override
-  void initState() {
-    super.initState();
-    _isFavorite = widget.product.isFavorite;
-  }
-
-  void _toggleFavorite() {
-    setState(() {
-      _isFavorite = !_isFavorite;
-      widget.product.isFavorite = _isFavorite;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isFavorite
-              ? '${widget.product.name} añadido a favoritos'
-              : '${widget.product.name} quitado de favoritos',
-        ),
-        duration: Duration(seconds: 1),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    // Ya no usamos alturas fijas aquí, dejamos que GridView y AspectRatio lo manejen.
-    // El Container externo ahora es solo para el diseño de la tarjeta (bordes, sombra).
+    // Ancho base de la tarjeta. El GridView lo ajustará.
+    // Usamos esto para calcular la altura de la imagen y el padding.
+    final double cardBaseWidth = MediaQuery.of(context).size.width * 0.42;
+    // Altura de la imagen (ej. una proporción común para imágenes de producto)
+    final double imageHeight = cardBaseWidth * 0.75;
+    // Altura estimada para la sección de texto + botones
+    final double infoSectionHeight =
+        95.0; // Ajusta este valor si tu texto/botones necesitan más/menos
+    // La tarjeta blanca empieza más abajo de la mitad de la imagen + altura de la sección de info
+    final double cardEstimatedHeight =
+        (imageHeight * 0.5) +
+        infoSectionHeight +
+        10; // +10 para padding inferior
+
     return GestureDetector(
-      onTap: widget.onViewDetails,
+      onTap: onViewDetails,
       child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface, // Fondo blanco de la tarjeta
-          borderRadius: BorderRadius.circular(16.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.stretch, // Para que la imagen ocupe el ancho
-          mainAxisAlignment:
-              MainAxisAlignment.spaceBetween, // Distribuye el espacio vertical
-          children: <Widget>[
-            // --- SECCIÓN DE IMAGEN ---
-            Expanded(
-              // La imagen tomará el espacio vertical disponible que le deje el contenido inferior
-              flex: 3, // Dale más peso a la imagen
-              child: Stack(
-                alignment: Alignment
-                    .topCenter, // Alinea el círculo naranja de fondo arriba
-                clipBehavior: Clip
-                    .none, // Permite que el círculo naranja se salga un poco si es necesario
-                children: [
-                  // Círculo naranja de fondo (opcional, o más sutil)
-                  // Si quieres un círculo exacto como el diseño anterior, sería:
-                  // Positioned(
-                  //   top: -20, // Ajusta para que "salga" un poco
-                  //   child: Container(
-                  //     width: 100, height: 100, // Ajusta tamaño
-                  //     decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.8), shape: BoxShape.circle),
-                  //   ),
-                  // ),
-                  Padding(
-                    // Padding para la imagen para que no toque los bordes de la tarjeta
-                    padding: const EdgeInsets.only(
-                      top: 12.0,
-                      left: 12.0,
-                      right: 12.0,
-                      bottom: 6.0,
+        width: cardBaseWidth, // Ayuda a que el Stack tenga un tamaño base
+        height: cardEstimatedHeight, // Damos una altura al contenedor del Stack
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.topCenter,
+          children: [
+            // --- CONTENEDOR DE INFORMACIÓN (TARJETA BLANCA) ---
+            Positioned(
+              // Empieza un poco antes de la mitad de la imagen para que la imagen sobresalga bien
+              top: imageHeight * 0.40,
+              left: 0,
+              right: 0,
+              bottom: 0, // Se extiende hasta el final del Stack
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface, // O colorScheme.surface
+                  borderRadius: BorderRadius.circular(
+                    18.0,
+                  ), // Bordes redondeados para la tarjeta
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.07),
+                      blurRadius: 15,
+                      spreadRadius: 0,
+                      offset: Offset(0, 5), // Sombra suave para la tarjeta
                     ),
-                    child: Hero(
-                      tag: 'product_image_${widget.product.id}',
-                      child: ClipRRect(
-                        // Para redondear la imagen si no es perfectamente circular
-                        borderRadius: BorderRadius.circular(12.0),
-                        child: Image.network(
-                          widget.product.imageUrl,
-                          fit: BoxFit
-                              .contain, // Contain para ver toda la imagen sin recortar, o Cover si prefieres
-                          loadingBuilder: (context, child, progress) =>
-                              progress == null
-                              ? child
-                              : Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                          errorBuilder: (context, error, stack) => Center(
-                            child: Icon(
-                              Icons.broken_image_outlined,
-                              color: Colors.grey[400],
-                              size: 40,
+                  ],
+                ),
+                padding: EdgeInsets.only(
+                  // Padding superior para dejar espacio a la imagen que sobresale.
+                  // (Mitad de la altura de la imagen) + (un poco de espacio)
+                  top: imageHeight * 0.60 + 10,
+                  left: 10.0,
+                  right: 10.0,
+                  bottom: 8.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize:
+                      MainAxisSize.min, // Importante para evitar overflow
+                  children: [
+                    Text(
+                      product.name,
+                      style: textTheme.titleMedium?.copyWith(
+                        // Un poco más grande
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        fontSize: 14, // Ajusta si es necesario
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 3),
+                    Text(
+                      'Tamaño ${product.sizeText.toLowerCase()}',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary.withOpacity(0.8),
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Spacer(), // Empuja el contenido inferior hacia abajo
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            '\$${product.price.toStringAsFixed(2)}',
+                            style: AppTextStyles.price.copyWith(
+                              fontSize: 17,
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w800,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ValueListenableBuilder<List<String>>(
+                              valueListenable:
+                                  favoritesService.favoriteIdsNotifier,
+                              builder: (context, favoriteIds, child) {
+                                final bool isCurrentlyFavorite =
+                                    favoritesService.isFavorite(product.id);
+                                return InkWell(
+                                  onTap: () =>
+                                      favoritesService.toggleFavorite(product),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(5.0),
+                                    child: Icon(
+                                      isCurrentlyFavorite
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isCurrentlyFavorite
+                                          ? Colors.redAccent[400]
+                                          : AppColors.textSecondary.withOpacity(
+                                              0.5,
+                                            ),
+                                      size: 22,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            // SizedBox(width: 2), // Puedes quitarlo si quieres los iconos más juntos
+                            InkWell(
+                              onTap: onAddToCart,
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: EdgeInsets.all(7),
+                                decoration: BoxDecoration(
+                                  color: colorScheme
+                                      .primary, // O colorScheme.secondary
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: colorScheme.primary.withOpacity(
+                                        0.5,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Icon(
+                                  Icons.add_shopping_cart_outlined,
+                                  color: AppColors.textOnPrimary,
+                                  size: 17,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
-            // --- SECCIÓN DE INFORMACIÓN (DEBAJO DE LA IMAGEN) ---
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 12.0,
-                right: 12.0,
-                bottom: 10.0,
-                top: 0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize
-                    .min, // Para que esta columna no se expanda innecesariamente
-                children: [
-                  Text(
-                    widget.product.name,
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+            // --- IMAGEN RECTANGULAR CON BORDES REDONDEADOS (SOBRESALIENDO) ---
+            Positioned(
+              top: 0, // Imagen desde la parte superior del Stack
+              child: Container(
+                width:
+                    cardBaseWidth *
+                    0.9, // La imagen es un poco más estrecha que la tarjeta base
+                height: imageHeight,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(
+                    16.0,
+                  ), // Bordes redondeados para la imagen
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(
+                        0.20,
+                      ), // Sombra más notoria para la imagen
+                      blurRadius: 16.0,
+                      // spreadRadius: -2.0, // Puedes jugar con esto
+                      offset: Offset(
+                        0,
+                        8.0,
+                      ), // Sombra que se proyecta hacia abajo
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Tamaño ${widget.product.sizeText.toLowerCase()}',
-                    style: textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Text(
-                        '\$${widget.product.price.toStringAsFixed(2)}',
-                        style: AppTextStyles.price.copyWith(
-                          fontSize: 16,
-                          color: colorScheme.primary,
+                  ],
+                ),
+                child: Hero(
+                  tag: 'product_image_${product.id}',
+                  child: ClipRRect(
+                    // Importante para que la imagen respete el borderRadius del Container
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Image.network(
+                      product.imageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, progress) =>
+                          progress == null
+                          ? child
+                          : Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                      errorBuilder: (context, error, stack) => Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16.0),
+                          color: Colors.grey[200],
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.hide_image_outlined,
+                            color: Colors.grey[400],
+                            size: imageHeight * 0.5,
+                          ),
                         ),
                       ),
-                      Row(
-                        // Fila para los dos botones pequeños
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          InkWell(
-                            onTap: _toggleFavorite,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Padding(
-                              // Padding para hacer el área táctil un poco más grande
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(
-                                _isFavorite
-                                    ? Icons.favorite_rounded
-                                    : Icons.favorite_border_rounded,
-                                color: _isFavorite
-                                    ? Colors.redAccent
-                                    : AppColors.textSecondary.withOpacity(0.7),
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          SizedBox(
-                            width: 4,
-                          ), // Espacio entre favorito y carrito
-                          InkWell(
-                            onTap: widget.onAddToCart,
-                            borderRadius: BorderRadius.circular(20),
-                            child: Container(
-                              padding: EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.add_shopping_cart_outlined,
-                                color: AppColors.textOnPrimary,
-                                size: 16,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ],
+                ),
               ),
             ),
           ],
