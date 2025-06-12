@@ -9,11 +9,13 @@ class CategoryModel {
   // Opcional: Podríamos añadir un icono o una imagen para la categoría
   // final IconData icon;
   // final String imageUrl;
+  final IconData iconData;
 
   CategoryModel({
     required this.id,
     required this.name,
     required this.type,
+    required this.iconData,
     // this.icon,
     // this.imageUrl,
   });
@@ -22,12 +24,34 @@ class CategoryModel {
 // Lista de categorías de ejemplo (podríamos ponerla en mock_data.dart también)
 // Esto es útil si queremos mostrar una lista de categorías seleccionables.
 final List<CategoryModel> mockCategories = [
-  CategoryModel(id: 'cat_pizza', name: 'Pizzas', type: ProductCategory.pizza),
   CategoryModel(
-    id: 'cat_burger',
+    id: 'cat1',
+    name: 'Pizzas',
+    type: ProductCategory.pizza,
+    iconData: Icons.local_pizza_rounded,
+  ),
+  CategoryModel(
+    id: 'cat2',
     name: 'Hamburguesas',
     type: ProductCategory.burger,
+    iconData: Icons.lunch_dining_rounded,
   ),
-  // CategoryModel(id: 'cat_drink', name: 'Bebidas', type: ProductCategory.drink),
-  // CategoryModel(id: 'cat_side', name: 'Acompañamientos', type: ProductCategory.side),
+  CategoryModel(
+    id: 'cat_drink',
+    name: 'Bebidas',
+    type: ProductCategory.drink,
+    iconData: Icons.local_drink_rounded,
+  ),
+  CategoryModel(
+    id: 'cat_postres',
+    name: 'Postres',
+    type: ProductCategory.side,
+    iconData: Icons.cake_rounded,
+  ),
+  CategoryModel(
+    id: 'cat_icecream',
+    name: 'Helados',
+    type: ProductCategory.icecream,
+    iconData: Icons.icecream_rounded,
+  ),
 ];

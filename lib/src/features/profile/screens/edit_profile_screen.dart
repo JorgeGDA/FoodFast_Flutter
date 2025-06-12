@@ -14,13 +14,13 @@ class EditProfileScreen extends StatefulWidget {
   // ... etc.
 
   const EditProfileScreen({
-    Key? key,
+    super.key,
     required this.currentName,
     required this.currentEmail,
     required this.currentAvatarPath,
     // this.currentIdType,
     // this.currentIdNumber,
-  }) : super(key: key);
+  });
 
   @override
   _EditProfileScreenState createState() => _EditProfileScreenState();
@@ -251,10 +251,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   colorScheme: colorScheme,
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Ingresa tu nombre.';
-                  if (value.trim().length < 3)
+                  }
+                  if (value.trim().length < 3) {
                     return 'Debe tener al menos 3 caracteres.';
+                  }
                   return null;
                 },
                 textInputAction: TextInputAction.next,
@@ -272,13 +274,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Ingresa tu correo.';
+                  }
                   final emailRegex = RegExp(
                     r"^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
                   );
-                  if (!emailRegex.hasMatch(value))
+                  if (!emailRegex.hasMatch(value)) {
                     return 'Ingresa un correo válido.';
+                  }
                   return null;
                 },
                 textInputAction: TextInputAction.next,
@@ -321,10 +325,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Ingresa tu número de ID.';
-                  if (value.length < 5)
+                  }
+                  if (value.length < 5) {
                     return 'Debe tener al menos 5 dígitos.'; // Ajusta según necesidad
+                  }
                   return null;
                 },
                 textInputAction: TextInputAction.next,
@@ -368,8 +374,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     true, // Para que solo se pueda editar con el DatePicker
                 onTap: () => _selectBirthDate(context),
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'Selecciona tu fecha de nacimiento.';
+                  }
                   return null;
                 },
               ),
@@ -386,16 +393,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Ingresa tu número de celular.';
-                  if (value.length < 10)
+                  }
+                  if (value.length < 10) {
                     return 'Debe tener al menos 10 dígitos.'; // Típico en Colombia
+                  }
                   return null;
                 },
                 textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 40.0), // Espacio antes del botón
-
               // --- BOTÓN DE GUARDAR (ABAJO) ---
               // Lo añadiremos fuera del SingleChildScrollView, como un FloatingActionButton extendido
               // o dentro de un Stack si quieres que esté siempre visible.
@@ -460,7 +468,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       hintText: hintText,
       prefixIcon: Icon(icon, color: colorScheme.primary.withOpacity(0.8)),
       filled: true,
-      fillColor: colorScheme.surfaceVariant.withOpacity(
+      fillColor: colorScheme.surfaceContainerHighest.withOpacity(
         0.3,
       ), // Un fondo muy sutil
       border: OutlineInputBorder(

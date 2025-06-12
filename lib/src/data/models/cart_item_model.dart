@@ -6,11 +6,15 @@ class CartItemModel {
   id; // Podría ser el mismo ID del producto o uno único para el ítem del carrito
   final ProductModel product;
   int quantity;
+  final ProductSize? selectedSize; // Opcional
+  final double? priceAtPurchase; // Opcional: precio del tamaño específico
 
   CartItemModel({
     required this.id,
     required this.product,
-    this.quantity = 1, // Por defecto, se añade 1 unidad
+    this.quantity = 1,
+    this.selectedSize,
+    this.priceAtPurchase, // Por defecto, se añade 1 unidad
   });
 
   // Calculadora para el precio total de este ítem (producto.precio * cantidad)

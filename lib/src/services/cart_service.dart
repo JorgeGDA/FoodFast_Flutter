@@ -12,7 +12,17 @@ class CartService {
   List<CartItemModel> get items => _itemsNotifier.value;
 
   // Método para añadir un producto al carrito
-  void addItem(ProductModel product, {int quantity = 1}) {
+  void addItem(
+    ProductModel product, {
+    int quantity = 1,
+    ProductSize? selectedSize,
+    double? priceAtTimeOfAdding,
+  }) {
+    // int index = _items.indexWhere(
+    //   (item) =>
+    //       item.product.id == product.id && item.selectedSize == selectedSize,
+    // );
+
     final List<CartItemModel> currentItems = List.from(
       _itemsNotifier.value,
     ); // Copia para modificar
@@ -26,7 +36,16 @@ class CartService {
     } else {
       // El producto no está en el carrito, añádelo
       currentItems.add(
-        CartItemModel(id: product.id, product: product, quantity: quantity),
+        CartItemModel(
+          id: product.id,
+          product: product,
+          quantity: quantity,
+          selectedSize:
+              selectedSize ??
+              product
+                  .size, // Usa el tamaño por defecto del producto si no se pasa
+          priceAtPurchase: priceAtTimeOfAdding ?? product.price,
+        ),
       );
     }
     _itemsNotifier.value = currentItems; // Notifica a los oyentes
@@ -81,11 +100,11 @@ class CartService {
       return;
     }
     print("CART_SERVICE: Contenido del carrito:");
-    items.forEach((item) {
+    for (var item in items) {
       print(
         "- ${item.product.name} (x${item.quantity}): \$${item.totalPrice.toStringAsFixed(2)}",
       );
-    });
+    }
     print("Subtotal: \$${subtotal.toStringAsFixed(2)}");
     print("------------------------------------");
   }

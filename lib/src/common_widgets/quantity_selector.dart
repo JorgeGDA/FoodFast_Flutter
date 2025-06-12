@@ -11,14 +11,14 @@ class QuantitySelector extends StatelessWidget {
   final double iconSize;
 
   const QuantitySelector({
-    Key? key,
+    super.key,
     required this.quantity,
     required this.onIncrement,
     required this.onDecrement,
     this.iconColor = AppColors.primary, // Color por defecto para los iconos
     this.backgroundColor = Colors.transparent, // Fondo transparente por defecto
     this.iconSize = 20.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

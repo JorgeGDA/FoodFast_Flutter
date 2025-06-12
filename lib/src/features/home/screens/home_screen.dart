@@ -14,6 +14,9 @@ import '../../cart/screens/cart_screen.dart'; // <-- Importaremos esto pronto
 import '../../../data/models/cart_item_model.dart';
 import 'package:food_app_portfolio/src/features/profile/screens/profile_screen.dart';
 import 'package:food_app_portfolio/src/services/favorites_service.dart';
+import 'package:food_app_portfolio/src/data/models/address_model.dart';
+import 'package:food_app_portfolio/src/features/profile/screens/addresses_screen.dart';
+import '/../../../utils/app_notifications.dart';
 
 class HomeScreen extends StatefulWidget {
   final CartService cartService; // <-- Añade cartService
@@ -22,21 +25,126 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback navigateToProfileTab; // <--- NUEVA PROPIEDAD
 
   const HomeScreen({
-    Key? key,
+    super.key,
     required this.cartService,
     required this.favoritesService,
     required this.navigateToCartTab,
     required this.navigateToProfileTab,
-  }) : super(key: key); // <-- Actualiza constructor
+  }); // <-- Actualiza constructor
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
+}
+// Puedes crear este widget dentro de home_screen.dart si solo se usa ahí,
+// o en una carpeta de widgets comunes si planeas reutilizarlo.
+
+class CategoryCircleItem extends StatelessWidget {
+  final String name;
+  final IconData iconData;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const CategoryCircleItem({
+    super.key,
+    required this.name,
+    required this.iconData,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        // Ancho total del ítem, incluyendo padding si quieres
+        width: 70, // Ajusta este ancho según necesites
+        margin: const EdgeInsets.symmetric(
+          horizontal: 6.0,
+        ), // Espacio entre ítems
+        child: Column(
+          mainAxisSize: MainAxisSize
+              .min, // Para que la columna no ocupe más espacio del necesario
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Círculo con el icono
+            AnimatedContainer(
+              duration: Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(
+                12.0,
+              ), // Padding interno del círculo
+              decoration: BoxDecoration(
+                color: isSelected ? colorScheme.primary : Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: isSelected
+                    ? [
+                        // Sombra más pronunciada cuando está seleccionado
+                        BoxShadow(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          blurRadius: 14,
+                          spreadRadius: 1,
+                          offset: Offset(0, 2),
+                        ),
+                        BoxShadow(
+                          // Sombra interna sutil para efecto de profundidad
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 1,
+                          spreadRadius: 1,
+                          offset: Offset(0, 1),
+                        ),
+                      ]
+                    : [
+                        // Sombra sutil cuando no está seleccionado
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                border:
+                    isSelected // Borde opcional cuando está seleccionado
+                    ? Border.all(
+                        color: colorScheme.onPrimary.withOpacity(0.3),
+                        width: 1.5,
+                      )
+                    : null,
+              ),
+              child: Icon(
+                iconData,
+                size: 28, // Tamaño del icono
+                color: isSelected ? colorScheme.onPrimary : Colors.grey,
+              ),
+            ),
+            SizedBox(height: 8), // Espacio entre el círculo y el texto
+            // Nombre de la categoría
+            Text(
+              name,
+              style: textTheme.bodySmall?.copyWith(
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
+                fontSize: 11, // Tamaño de letra pequeño
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HomeScreenState extends State<HomeScreen> {
   List<ProductModel> _allProducts = [];
   List<ProductModel> _displayedProducts = [];
   List<ProductModel> _popularProducts = []; // Para el carrusel
+  AddressModel? _selectedDeliveryAddress;
 
   // Usaremos el enum ProductCategory para el estado de la categoría seleccionada
   ProductCategory? _selectedCategory; // Nullable para "Todos"
@@ -50,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<CategoryModel> _categories =
       mockCategories; // Usamos las de category_model.dart
+
   static const String _userAvatarPath = "assets/images/oahh.jpg";
   @override
   void dispose() {
@@ -58,6 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  @override
   void initState() {
     super.initState();
     _allProducts = MockData.products;
@@ -65,9 +175,43 @@ class _HomeScreenState extends State<HomeScreen> {
         .where((p) => p.isPopular || p.isFeatured)
         .toList();
     _filterProducts(); // Llama al filtro inicial
+    if (MockData.userAddresses.isNotEmpty) {
+      _selectedDeliveryAddress = MockData.userAddresses.firstWhere(
+        (addr) => addr.isPrimary,
+        orElse: () => MockData.userAddresses.first,
+      );
+    }
   }
 
   // Dentro de la clase _HomeScreenState
+  // En _HomeScreenState
+  void _navigateToChangeAddress() async {
+    // Navegamos a AddressesScreen y esperamos un resultado (AddressModel)
+    final result = await Navigator.push<AddressModel>(
+      // Especificamos el tipo de resultado
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddressesScreen(
+          // Si AddressesScreen necesitara saber cuál está seleccionada inicialmente:
+          // initiallySelectedAddress: _selectedDeliveryAddress,
+        ),
+      ),
+    );
+
+    // Si el usuario seleccionó una dirección y volvió
+    // En _HomeScreenState, _navigateToChangeAddress, dentro del if (result != null)
+    if (result != null) {
+      setState(() {
+        _selectedDeliveryAddress = result;
+      });
+      showAppNotification(
+        context: context,
+        title: 'Dirección Actualizada',
+        description: 'Entregaremos tu pedido en: ${result.streetAddress}.',
+        type: AppNotificationType.success, // O .info
+      );
+    }
+  }
 
   void _filterProducts() {
     List<ProductModel> tempProducts = List.from(_allProducts);
@@ -125,12 +269,19 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleAddToCart(ProductModel product) {
     widget.cartService.addItem(product); // <-- Usa cartService
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${product.name} añadido al carrito'),
-        backgroundColor: Theme.of(context).colorScheme.secondary,
-        duration: Duration(seconds: 2),
-      ),
+    showAppNotification(
+      context: context,
+      title: '¡Al Carrito!', // Título más corto y amigable
+      description: '${product.name} se añadió correctamente.',
+      type: AppNotificationType.cart, // Nuevo tipo específico
+      // Opcional: Añadir un botón de acción
+      // action: TextButton(
+      //   onPressed: () {
+      //     widget.navigateToCartTab(); // Asume que esta función existe y navega al carrito
+      //     ElegantNotification.clearAll(context: context); // Cierra la notificación
+      //   },
+      //   child: Text("VER CARRITO", style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+      // ),
     );
     widget.cartService.printCart(); // Para depuración
   }
@@ -169,6 +320,49 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _navigateToProfileScreen() {
     widget.navigateToProfileTab();
+  }
+
+  Widget _buildSectionHeaderWithDivider(
+    BuildContext context,
+    String title,
+    Color dividerColor, {
+    bool isForRelatedList = false,
+  }) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(
+            left: isForRelatedList
+                ? 0.0
+                : 0.0, // El padding general ya está en el contenedor padre
+            top: isForRelatedList
+                ? 0
+                : 0, // Ajuste para que el título de relacionados esté bien alineado
+            bottom: isForRelatedList
+                ? 12
+                : 0, // Espacio antes del listview de relacionados
+          ),
+          child: Text(
+            title,
+            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        SizedBox(height: 6),
+        // No mostrar divisor justo antes del ListView de "También te podría gustar"
+        if (!isForRelatedList)
+          Container(
+            height: 2.5,
+            width: 80.0,
+            decoration: BoxDecoration(
+              color: dividerColor.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(2.0),
+            ),
+            margin: const EdgeInsets.only(bottom: 0),
+          ),
+      ],
+    );
   }
 
   Widget _buildAdvancedFilters() {
@@ -211,7 +405,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             selectedColor: colorScheme.primary,
             checkmarkColor: colorScheme.onPrimary,
-            backgroundColor: colorScheme.surfaceVariant.withOpacity(0.5),
+            backgroundColor: colorScheme.surfaceContainerHighest.withOpacity(
+              0.5,
+            ),
             shape: StadiumBorder(),
           ),
 
@@ -280,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 vertical: 8.0,
               ),
               decoration: BoxDecoration(
-                color: colorScheme.surfaceVariant.withOpacity(0.5),
+                color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(20.0),
                 border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
               ),
@@ -419,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Buscar Pizzas, Hamburguesas...',
+                hintText: '¿Que se te antoja hoy..?',
                 prefixIcon: Icon(Icons.search, color: colorScheme.primary),
                 suffixIcon: _searchTerm.isNotEmpty
                     ? IconButton(
@@ -476,269 +672,386 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // En _HomeScreenState dentro de lib/src/features/home/screens/home_screen.dart
+
   Widget _buildCategorySelector() {
-    // Usaremos un SingleChildScrollView para la fila de categorías si son muchas
+    final colorScheme = Theme.of(
+      context,
+    ).colorScheme; // Necesario para el ítem "Todos"
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-      height: 60, // Altura fija para la fila de categorías
+      // Aumentamos la altura para dar espacio a los círculos y el texto debajo
+      height:
+          100, // Ajusta esta altura según el tamaño de tus CategoryCircleItem
+      padding: const EdgeInsets.symmetric(
+        vertical: 10.0,
+      ), // Padding vertical para el contenedor
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10.0,
+        ), // Padding para el inicio y fin del ListView
+        physics: BouncingScrollPhysics(), // Efecto de rebote agradable
         children: [
-          // Opción para "Todos"
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ChoiceChip(
-              label: Text('Todos'),
-              selected: _selectedCategory == null,
-              onSelected: (selected) {
-                if (selected) _onCategorySelected(null);
-              },
-              selectedColor: Theme.of(context).colorScheme.primary,
-              labelStyle: TextStyle(
-                color: _selectedCategory == null
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).textTheme.bodyLarge?.color,
-              ),
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.surfaceVariant.withOpacity(0.5),
-              shape: StadiumBorder(), // Bordes redondeados tipo "píldora"
-            ),
+          // --- Opción para "Todos" ---
+          CategoryCircleItem(
+            name: 'Todos',
+            iconData:
+                Icons.apps_rounded, // O el icono que prefieras para "Todos"
+            isSelected: _selectedCategory == null,
+            onTap: () => _onCategorySelected(null),
           ),
-          // Chips para cada categoría
+
+          // --- Resto de las categorías ---
           ..._categories.map((category) {
-            bool isSelected = _selectedCategory == category.type;
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4.0),
-              child: ChoiceChip(
-                label: Text(category.name),
-                selected: isSelected,
-                onSelected: (selected) {
-                  if (selected) _onCategorySelected(category.type);
-                },
-                avatar: category.type == ProductCategory.pizza
-                    ? Icon(
-                        Icons.local_pizza_outlined,
-                        size: 18,
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.primary,
-                      )
-                    : category.type == ProductCategory.burger
-                    ? Icon(
-                        Icons.lunch_dining_outlined,
-                        size: 18,
-                        color: isSelected
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : Theme.of(context).colorScheme.primary,
-                      )
-                    : null, // Añade más iconos si quieres
-                selectedColor: Theme.of(context).colorScheme.primary,
-                labelStyle: TextStyle(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : Theme.of(context).textTheme.bodyLarge?.color,
-                ),
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.surfaceVariant.withOpacity(0.5),
-                shape: StadiumBorder(),
-              ),
+            return CategoryCircleItem(
+              name: category.name,
+              iconData: category.iconData, // Usamos el icono del CategoryModel
+              isSelected: _selectedCategory == category.type,
+              onTap: () => _onCategorySelected(category.type),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 
+  // En _HomeScreenState dentro de lib/src/features/home/screens/home_screen.dart
+
   Widget _buildPopularProductsCarousel() {
-    if (_popularProducts.isEmpty)
-      return SizedBox.shrink(); // No mostrar nada si no hay populares
+    if (_popularProducts.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 16.0),
+      margin: const EdgeInsets.symmetric(
+        vertical: 20.0,
+      ), // Un poco más de margen vertical
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Populares Esta Semana',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            padding: const EdgeInsets.only(
+              left: 16.0,
+              bottom: 4.0,
+            ), // Ajuste de padding
+            child: _buildSectionHeaderWithDivider(
+              // Reutilizamos el header
+              context,
+              'Populares Semanal',
+              colorScheme.primary, // Usamos el color del tema
             ),
           ),
-          SizedBox(height: 12),
-          CarouselSlider(
-            options: CarouselOptions(
-              height: 240.0, // Altura de las tarjetas del carrusel
-              autoPlay: true,
-              autoPlayInterval: Duration(seconds: 5),
-              enlargeCenterPage: true, // La tarjeta del centro es más grande
-              viewportFraction:
-                  0.8, // Cuánto de la siguiente/anterior tarjeta se ve
-              aspectRatio: 16 / 9, // Puede ser redundante si height está fijo
-            ),
-            items: _popularProducts.map((product) {
-              // Usaremos una versión ligeramente modificada de ProductCard o una nueva
-              // Por ahora, vamos a hacer una tarjeta simple aquí
-              return Builder(
-                builder: (BuildContext context) {
-                  return GestureDetector(
-                    onTap: () => _handleViewDetails(product),
-                    child: Card(
-                      elevation: 2.0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+          SizedBox(height: 16), // Más espacio antes del carrusel
+          CarouselSlider.builder(
+            // Usamos CarouselSlider.builder para mejor rendimiento
+            itemCount: _popularProducts.length,
+            itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) {
+              final product = _popularProducts[itemIndex];
+
+              // --- Tarjeta de Producto para el Carrusel ---
+              return GestureDetector(
+                onTap: () => _handleViewDetails(product),
+                child: Container(
+                  // El margen ahora se controla por el viewportFraction y el padding del CarouselSlider
+                  // margin: EdgeInsets.symmetric(horizontal: 5.0),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface, // Fondo de la tarjeta
+                    borderRadius: BorderRadius.circular(
+                      18.0,
+                    ), // Bordes bien redondeados
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: Offset(0, 4),
                       ),
-                      margin: EdgeInsets.symmetric(
-                        horizontal: 5.0,
-                        vertical: 5.0,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            flex: 3, // Más espacio para la imagen
-                            child: Hero(
-                              tag:
-                                  'popular_product_image_${product.id}', // Tag único para Hero
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(12.0),
-                                ),
-                                child: Image.network(
-                                  product.imageUrl,
-                                  fit: BoxFit.cover,
-                                  // Añade loadingBuilder y errorBuilder si es necesario
-                                ),
-                              ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // --- Imagen ---
+                      Expanded(
+                        flex: 6, // Más espacio para la imagen en el carrusel
+                        child: Hero(
+                          tag: 'popular_product_image_${product.id}',
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(18.0),
                             ),
+                            child: product.imageUrl.startsWith('http')
+                                ? Image.network(
+                                    product.imageUrl,
+                                    fit: BoxFit.cover,
+                                    loadingBuilder:
+                                        (context, child, progress) =>
+                                            progress == null
+                                            ? child
+                                            : Center(
+                                                child:
+                                                    CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                              ),
+                                    errorBuilder: (context, error, stack) =>
+                                        Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.grey[300],
+                                            size: 50,
+                                          ),
+                                        ),
+                                  )
+                                : Image.asset(
+                                    product.imageUrl,
+                                    fit: BoxFit.cover,
+                                    // loadingBuilder:
+                                    //     (context, child, progress) =>
+                                    //         progress == null
+                                    //         ? child
+                                    //         : Center(
+                                    //             child:
+                                    //                 CircularProgressIndicator(
+                                    //                   strokeWidth: 2,
+                                    //                 ),
+                                    //           ),
+                                    errorBuilder: (context, error, stack) =>
+                                        Center(
+                                          child: Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.grey[300],
+                                            size: 50,
+                                          ),
+                                        ),
+                                  ),
                           ),
-                          Expanded(
-                            flex: 2, // Espacio para nombre y precio
-                            child: Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
+                        ),
+                      ),
+                      // --- Información y Acciones ---
+                      Expanded(
+                        flex: 4, // Espacio para nombre, precio y acciones
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            12.0,
+                            10.0,
+                            12.0,
+                            10.0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment
+                                .spaceBetween, // Distribuye el espacio
+                            children: [
+                              Text(
+                                product.name,
+                                style: textTheme.titleMedium?.copyWith(
+                                  // Un poco más grande
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines:
+                                    1, // Una línea para el carrusel para mantenerlo compacto
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              // SizedBox(height: 4), // Quitado para usar MainAxisAlignment.spaceBetween
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Text(
-                                    product.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(fontWeight: FontWeight.bold),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
                                     '\$${product.price.toStringAsFixed(2)}',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
+                                    style: textTheme.titleLarge?.copyWith(
+                                      // Precio más grande
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // Botón de Favorito
+                                      ValueListenableBuilder<List<String>>(
+                                        valueListenable: widget
+                                            .favoritesService
+                                            .favoriteIdsNotifier,
+                                        builder: (context, favoriteIds, child) {
+                                          final bool isCurrentlyFavorite =
+                                              widget.favoritesService
+                                                  .isFavorite(product.id);
+                                          return InkWell(
+                                            onTap: () => widget.favoritesService
+                                                .toggleFavorite(product),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(
+                                                5.0,
+                                              ),
+                                              child: Icon(
+                                                isCurrentlyFavorite
+                                                    ? Icons.favorite_rounded
+                                                    : Icons
+                                                          .favorite_border_rounded,
+                                                color: isCurrentlyFavorite
+                                                    ? Colors.redAccent[400]
+                                                    : AppColors.textSecondary
+                                                          .withOpacity(0.6),
+                                                size: 24,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      SizedBox(width: 6),
+                                      // Botón de Añadir al Carrito
+                                      InkWell(
+                                        onTap: () => _handleAddToCart(product),
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: Container(
+                                          padding: EdgeInsets.all(7),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme
+                                                .primary, // Usar color secundario o primario
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: colorScheme.primary
+                                                    .withOpacity(0.3),
+                                                blurRadius: 6,
+                                                offset: Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            Icons.add_shopping_cart_outlined,
+                                            color: colorScheme.onSecondary,
+                                            size: 20,
+                                          ),
                                         ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
-
-    String titleText = _selectedCategory == null
-        ? 'Todos los Productos'
-        : _categories
-              .firstWhere(
-                (c) => c.type == _selectedCategory,
-                orElse: () => CategoryModel(
-                  id: '',
-                  name: 'Productos',
-                  type: ProductCategory.pizza,
+                    ],
+                  ),
                 ),
-              )
-              .name;
-    // El orElse es por si acaso, aunque no debería pasar si _categories está bien.
-
-    IconData sectionIcon =
-        Icons.list_alt_rounded; // Icono por defecto para "Todos"
-    if (_selectedCategory != null) {
-      switch (_selectedCategory!) {
-        // Usamos ! porque ya comprobamos que no es null
-        case ProductCategory.pizza:
-          sectionIcon = Icons.local_pizza_rounded;
-          break;
-        case ProductCategory.burger:
-          sectionIcon = Icons.lunch_dining_rounded;
-          break;
-        // Añade más casos para otras categorías si las tienes
-        default:
-          sectionIcon = Icons.fastfood_rounded;
-      }
-    }
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      decoration: BoxDecoration(
-        color: colorScheme.primary, // Fondo naranja
-        borderRadius: BorderRadius.circular(12.0), // Bordes redondeados
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.primary.withOpacity(0.4),
-            blurRadius: 8,
-            offset: Offset(0, 4), // Sombra hacia abajo
-          ),
-          BoxShadow(
-            // Sombra interna sutil para efecto de profundidad (opcional)
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 1,
-            spreadRadius: 1,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize:
-            MainAxisSize.min, // Para que el contenedor no ocupe todo el ancho
-        children: [
-          Icon(
-            sectionIcon,
-            color: AppColors.textOnPrimary, // Icono blanco
-            size: 22,
-          ),
-          SizedBox(width: 10),
-          Text(
-            titleText,
-            style: textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.textOnPrimary, // Texto blanco
+              );
+            },
+            options: CarouselOptions(
+              height:
+                  250.0, // Aumentamos la altura para acomodar más contenido y mejor imagen
+              autoPlay: true,
+              autoPlayInterval: Duration(
+                seconds: 4,
+              ), // Un poco más lento para apreciar
+              enlargeCenterPage: true,
+              enlargeFactor:
+                  0.25, // Cuánto más grande se hace la tarjeta central
+              viewportFraction:
+                  0.68, // Fracción del viewport para cada ítem (0.7 a 0.8 suele ser bueno)
+              aspectRatio:
+                  1.0, // Menos relevante si height está fijo, pero ayuda a la proporción
+              // Opcional: añadir un poco de padding si quieres más espacio entre tarjetas
+              // cuando no están en el centro y viewportFraction es < 1
+              pageViewKey: PageStorageKey<String>(
+                'popular_carousel',
+              ), // Para mantener el estado del scroll
             ),
           ),
         ],
       ),
     );
   }
+
+  // Widget _buildSectionTitle(BuildContext context) {
+  //   final textTheme = Theme.of(context).textTheme;
+  //   final colorScheme = Theme.of(context).colorScheme;
+
+  //   String titleText = _selectedCategory == null
+  //       ? 'Todos los Productos'
+  //       : _categories
+  //             .firstWhere(
+  //               (c) => c.type == _selectedCategory,
+  //               orElse: () => CategoryModel(
+  //                 id: '',
+  //                 name: 'Productos',
+  //                 type: ProductCategory.pizza,
+  //                 iconData: Icons.local_pizza_rounded,
+  //               ),
+  //             )
+  //             .name;
+  //   // El orElse es por si acaso, aunque no debería pasar si _categories está bien.
+
+  //   IconData sectionIcon =
+  //       Icons.list_alt_rounded; // Icono por defecto para "Todos"
+  //   if (_selectedCategory != null) {
+  //     switch (_selectedCategory!) {
+  //       // Usamos ! porque ya comprobamos que no es null
+  //       case ProductCategory.pizza:
+  //         sectionIcon = Icons.local_pizza_rounded;
+  //         break;
+  //       case ProductCategory.burger:
+  //         sectionIcon = Icons.lunch_dining_rounded;
+  //         break;
+  //       // Añade más casos para otras categorías si las tienes
+  //       default:
+  //         sectionIcon = Icons.fastfood_rounded;
+  //     }
+  //   }
+
+  //   return Container(
+  //     margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+  //     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+  //     decoration: BoxDecoration(
+  //       color: colorScheme.primary, // Fondo naranja
+  //       borderRadius: BorderRadius.circular(12.0), // Bordes redondeados
+  //       boxShadow: [
+  //         BoxShadow(
+  //           color: colorScheme.primary.withOpacity(0.4),
+  //           blurRadius: 8,
+  //           offset: Offset(0, 4), // Sombra hacia abajo
+  //         ),
+  //         BoxShadow(
+  //           // Sombra interna sutil para efecto de profundidad (opcional)
+  //           color: Colors.black.withOpacity(0.1),
+  //           blurRadius: 1,
+  //           spreadRadius: 1,
+  //           offset: Offset(0, 1),
+  //         ),
+  //       ],
+  //     ),
+  //     child: Row(
+  //       mainAxisSize:
+  //           MainAxisSize.min, // Para que el contenedor no ocupe todo el ancho
+  //       children: [
+  //         Icon(
+  //           sectionIcon,
+  //           color: AppColors.textOnPrimary, // Icono blanco
+  //           size: 22,
+  //         ),
+  //         SizedBox(width: 10),
+  //         Text(
+  //           titleText,
+  //           style: textTheme.titleLarge?.copyWith(
+  //             fontWeight: FontWeight.bold,
+  //             color: AppColors.textOnPrimary, // Texto blanco
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -747,133 +1060,199 @@ class _HomeScreenState extends State<HomeScreen> {
     //   context,
     // ).colorScheme; // También útil, puedes añadirla si no está
     return Scaffold(
-      appBar: AppBar(
-        // title: Text('Fast Food Paradise'), // El título se mantendrá si no pones `leading` explícito
-        // Si quieres que el título esté a la izquierda y los iconos a la derecha,
-        // el título no necesita estar en `leading`. `AppBar` lo maneja bien.
-        // El titleTextStyle y backgroundColor ya deberían venir del tema global.
-        backgroundColor: AppColors.primary,
-        // Si quieres un título explícito y centrado diferente, puedes usar:
-        // centerTitle: true, // Opcional, si quieres centrar el título
-        title: Text(
-          'Fast Food Paradise',
-          // No necesitas especificar color aquí si tu AppBarTheme está bien configurado
-          style: TextStyle(
-            color: AppColors.textOnPrimary,
-            // fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
-        ),
-        elevation: 4.0, // Sutil sombra para el AppBar
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(
+          70.0,
+        ), // Altura del AppBar personalizado, ajusta según necesites
+        child: Container(
+          // Margen para que el AppBar "flote" y se vean los bordes redondeados por todas partes
+          margin: const EdgeInsets.only(bottom: 6.0),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 12.0,
+          ), // Padding interno
+          decoration: BoxDecoration(
+            color: Colors
+                .white, // O AppColors.primary si prefieres el fondo naranja
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(
+                40.0,
+              ), // Radio más grande para que se note
+              bottomRight: Radius.circular(40.0),
 
-        actions: [
-          // --- 1. ICONO DEL CARRITO (como lo tenías) ---
-          ValueListenableBuilder<List<CartItemModel>>(
-            valueListenable: widget.cartService.itemsNotifier,
-            builder: (context, items, child) {
-              int itemCount = widget.cartService.totalItemsCount;
-              return Center(
-                // Center para alinear verticalmente el badge
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    right: 2.0,
-                  ), // Espacio antes del avatar
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          itemCount == 0
-                              ? Icons.shopping_cart_outlined
-                              : Icons.shopping_cart,
-                          color: AppColors
-                              .textOnPrimary, // El color debería venir del AppBarTheme
-                        ),
-                        onPressed: _navigateToCartScreen,
-                        tooltip: 'Ver Carrito',
+              // Si también quieres redondear abajo (no es común si está pegado al borde):
+              // bottomLeft: Radius.circular( (margin != null) ? 30.0 : 0),
+              // bottomRight: Radius.circular( (margin != null) ? 30.0 : 0),
+            ), // Bordes bien redondeados
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 40,
+                spreadRadius: 1,
+                offset: Offset(0, 1), // Sombra suave
+              ),
+            ],
+          ),
+          child: SafeArea(
+            // SafeArea para evitar el notch/barra de estado si el AppBar es muy alto
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                // --- IZQUIERDA: FOTO DE PERFIL ---
+                InkWell(
+                  onTap: _navigateToProfileScreen, // Ya tienes esta función
+                  customBorder: CircleBorder(),
+                  child: Container(
+                    // padding: const EdgeInsets.all(2.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      // Opcional: un borde sutil alrededor del avatar
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.8),
+                        width: 1.8,
                       ),
-                      if (itemCount > 0)
-                        Positioned(
-                          right: 6, // Ajusta para el badge
-                          top: 6, // Ajusta para el badge
-                          child: Container(
-                            padding: EdgeInsets.all(
-                              itemCount > 9 ? 3 : 4,
-                            ), // Más padding si son 2 dígitos
-                            decoration: BoxDecoration(
-                              color: Colors
-                                  .green, // Un color que resalte para el badge
-                              shape: BoxShape.circle,
-                              // borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: AppColors.surface,
-                                width: 1.0,
-                              ), // Borde blanco
-                            ),
-                            constraints: BoxConstraints(
-                              minWidth: 18,
-                              minHeight: 18,
-                            ),
-                            child: Text(
-                              '$itemCount',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 20, // Tamaño del avatar
+                      backgroundImage: AssetImage(_userAvatarPath),
+                      backgroundColor: AppColors.primary.withOpacity(0.5),
+                    ),
                   ),
                 ),
-              );
-            },
-          ),
 
-          // --- 2. FOTO DE PERFIL CIRCULAR ---
-          Padding(
-            padding: const EdgeInsets.only(
-              right: 16.0,
-              top: 6.0,
-              bottom: 6.0,
-            ), // Espaciado para el avatar
-            child: InkWell(
-              onTap: _navigateToProfileScreen,
-              customBorder: CircleBorder(), // Para que el ripple sea circular
-              child: Container(
-                // padding: const EdgeInsets.all(
-                //   1.0,
-                // ), // Espacio para el borde/sombra si el avatar es pequeño
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.surface, width: 2.0),
-                ),
-                child: CircleAvatar(
-                  radius: 20, // Tamaño del avatar en el AppBar
-                  backgroundImage: AssetImage(_userAvatarPath),
+                // --- CENTRO: DIRECCIÓN DE ENTREGA ---
+                // En el método build de _HomeScreenState, dentro del PreferredSize > Container > SafeArea > Row:
 
-                  // Puedes añadir un backgroundColor por si la imagen tarda o falla
-                  backgroundColor: AppColors.background.withOpacity(0.5),
+                // --- CENTRO: DIRECCIÓN DE ENTREGA ---
+                Expanded(
+                  child: InkWell(
+                    onTap:
+                        _navigateToChangeAddress, // <--- LLAMAR A LA NUEVA FUNCIÓN
+                    borderRadius: BorderRadius.circular(
+                      8.0,
+                    ), // Para el efecto ripple
+                    child: Padding(
+                      // Añadimos un poco de padding para que el InkWell no sea tan ajustado
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4.0,
+                        vertical: 8.0,
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'ENTREGAR EN',
+                            style: textTheme.labelSmall?.copyWith(
+                              color: AppColors.textSecondary.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  // Mostrar la dirección seleccionada o un mensaje por defecto
+                                  _selectedDeliveryAddress?.streetAddress ??
+                                      'Seleccionar Dirección',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.expand_more_rounded,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+                // ... (resto del AppBar: carrito, etc.)
+
+                // --- DERECHA: ICONO DEL CARRITO ---
+                ValueListenableBuilder<List<CartItemModel>>(
+                  valueListenable: widget.cartService.itemsNotifier,
+                  builder: (context, items, child) {
+                    int itemCount = widget.cartService.totalItemsCount;
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            itemCount == 0
+                                ? Icons
+                                      .shopping_cart_outlined // Un ícono diferente para el carrito
+                                : Icons.shopping_cart,
+                            color: AppColors.primary, // Color del ícono
+                            size: 26, // Tamaño del ícono
+                          ),
+                          onPressed:
+                              _navigateToCartScreen, // Ya tienes esta función
+                          tooltip: 'Ver Carrito',
+                        ),
+                        if (itemCount > 0)
+                          Positioned(
+                            right: 4, // Ajusta para el badge
+                            top: 4, // Ajusta para el badge
+                            child: Container(
+                              padding: EdgeInsets.all(itemCount > 9 ? 3 : 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.surface,
+                                  width: 1.0,
+                                ),
+                              ),
+                              constraints: BoxConstraints(
+                                minWidth: 17,
+                                minHeight: 17,
+                              ),
+                              child: Text(
+                                '$itemCount',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
       body: CustomScrollView(
         slivers: <Widget>[
           // Cada widget que antes estaba en el Column ahora es un SliverToBoxAdapter
-          SliverToBoxAdapter(child: _buildCategorySelector()),
-          SliverToBoxAdapter(child: _buildPopularProductsCarousel()),
           SliverToBoxAdapter(child: _buildSearchBarAndFilters()),
+          SliverToBoxAdapter(child: _buildPopularProductsCarousel()),
+          SliverToBoxAdapter(child: _buildCategorySelector()),
+
           // SliverToBoxAdapter(
           //   child: _buildAdvancedFilters(), // Si decides re-añadirlo
           // ),
-          SliverToBoxAdapter(
-            child: _buildSectionTitle(context), // ¡Ahora esto se desplazará!
-          ),
+          // SliverToBoxAdapter(
+          //   child: _buildSectionTitle(context), // ¡Ahora esto se desplazará!
+          // ),
 
           // Ahora, en lugar de Expanded(GridView.builder(...)), usamos SliverGrid
           // o un mensaje si no hay productos.
@@ -898,6 +1277,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : SliverPadding(
                   // Añade padding alrededor del Grid
                   padding: const EdgeInsets.all(16.0),
+
                   sliver: SliverGrid(
                     gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
@@ -910,6 +1290,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       BuildContext context,
                       int index,
                     ) {
+                      background:
+                      AppColors.background;
                       final product = _displayedProducts[index];
                       return ProductCard(
                         product: product,

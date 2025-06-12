@@ -13,10 +13,10 @@ class MainNavigator extends StatefulWidget {
   final FavoritesService favoritesService;
 
   const MainNavigator({
-    Key? key,
+    super.key,
     required this.cartService,
     required this.favoritesService,
-  }) : super(key: key);
+  });
 
   @override
   _MainNavigatorState createState() => _MainNavigatorState();

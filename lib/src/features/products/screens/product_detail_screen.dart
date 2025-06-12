@@ -8,6 +8,7 @@ import '../../../data/mock_data.dart';
 import '../../../services/cart_service.dart';
 import '../widgets/product_card.dart';
 import '../../../services/favorites_service.dart';
+import '../../../../utils/app_notifications.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final ProductModel product;
@@ -15,11 +16,11 @@ class ProductDetailScreen extends StatefulWidget {
   final FavoritesService favoritesService; // <--- AÑADIR
 
   const ProductDetailScreen({
-    Key? key,
+    super.key,
     required this.product,
     required this.cartService,
     required this.favoritesService,
-  }) : super(key: key);
+  });
 
   @override
   _ProductDetailScreenState createState() => _ProductDetailScreenState();
@@ -27,6 +28,11 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final ValueNotifier<bool> _isAppBarCollapsedNotifier = ValueNotifier(false);
+  // --- NUEVOS ESTADOS ---
+  int _selectedQuantity = 1;
+  late ProductSize _selectedSize; // Para el tamaño seleccionado
+  late double _currentPrice;
+  // final List<ProductSize> availableSizes = ProductSize.values;
 
   final Map<String, IconData> ingredientIcons = {
     'carne de res': Icons.kebab_dining_rounded,
@@ -47,6 +53,60 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void dispose() {
     _isAppBarCollapsedNotifier.dispose();
     super.dispose();
+  }
+
+  void initState() {
+    super.initState();
+    // Inicializar con el tamaño y precio por defecto del producto
+    _selectedSize = widget
+        .product
+        .size; // Asumimos que product.size es el tamaño por defecto
+    _updateCurrentPrice(); // Calcula el precio inicial basado en el tamaño por defecto
+  }
+
+  void _updateCurrentPrice() {
+    // Lógica para actualizar el precio basado en _selectedSize
+    // Esta es una lógica de ejemplo, ajusta según tus necesidades
+    double priceMultiplier = 1.0;
+    switch (_selectedSize) {
+      case ProductSize.pequeno:
+        priceMultiplier = 1.0;
+        break;
+      case ProductSize.mediano:
+        priceMultiplier = 1.2;
+        break;
+      case ProductSize.grande:
+        priceMultiplier = 1.4;
+        break;
+      case ProductSize.extraGrande:
+        priceMultiplier = 1.6;
+        break;
+    }
+    setState(() {
+      _currentPrice = widget.product.price * priceMultiplier;
+    });
+  }
+
+  void _onSizeSelected(ProductSize newSize) {
+    setState(() {
+      _selectedSize = newSize;
+      _updateCurrentPrice(); // Actualiza el precio cuando cambia el tamaño
+      print('Size selected: $newSize, New Price: $_currentPrice');
+    });
+  }
+
+  void _incrementQuantity() {
+    setState(() {
+      _selectedQuantity++;
+    });
+  }
+
+  void _decrementQuantity() {
+    if (_selectedQuantity > 1) {
+      setState(() {
+        _selectedQuantity--;
+      });
+    }
   }
 
   IconData _getIngredientIcon(String ingredientName) {
@@ -116,7 +176,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return SizedBox.shrink();
     }
     // El título ahora se maneja fuera, solo devolvemos el ListView
-    return Container(
+    return SizedBox(
       height: 250,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -166,6 +226,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final screenHeight = MediaQuery.of(context).size.height;
+    final List<ProductSize> availableSizes = ProductSize.values;
 
     return Scaffold(
       body: CustomScrollView(
@@ -240,17 +301,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   background: Hero(
                     tag: 'product_image_${widget.product.id}',
-                    child: Image.network(
-                      widget.product.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Center(
-                        child: Icon(
-                          Icons.broken_image,
-                          size: 100,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ),
+                    child: widget.product.imageUrl.startsWith('http')
+                        ? Image.network(
+                            widget.product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 100,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                          )
+                        : Image.asset(
+                            widget.product.imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 100,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                          ),
                   ),
                 );
               },
@@ -261,7 +336,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Container(
               transform: Matrix4.translationValues(0.0, -20.0, 0.0),
               decoration: BoxDecoration(
-                color: colorScheme.background,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
               ),
               padding: const EdgeInsets.fromLTRB(20.0, 28.0, 20.0, 20.0),
@@ -286,7 +361,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       widget.product.name,
                       style: textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: colorScheme.onBackground,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -315,13 +390,60 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ],
                       ),
                       Text(
-                        '\$${widget.product.price.toStringAsFixed(2)}',
+                        '\$${_currentPrice.toStringAsFixed(2)}',
                         style: textTheme.headlineSmall?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
+                  ),
+                  SizedBox(height: 24),
+                  _buildSectionHeaderWithDivider(
+                    context,
+                    'Tamaño',
+                    colorScheme.primary.withOpacity(0.7),
+                  ),
+                  SizedBox(height: 10),
+                  Wrap(
+                    spacing: 10.0,
+                    runSpacing: 8.0,
+                    children: availableSizes.map((size) {
+                      bool isSelected = _selectedSize == size;
+                      return ChoiceChip(
+                        label: Text(
+                          ProductModel.getSizeTextStatic(size),
+                        ), // Usar un método estático
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            _onSizeSelected(size);
+                          }
+                        },
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? colorScheme.onPrimary
+                              : colorScheme.onSurfaceVariant,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                        selectedColor: colorScheme.primary,
+                        backgroundColor: colorScheme.surfaceVariant.withOpacity(
+                          0.5,
+                        ),
+                        shape: StadiumBorder(
+                          side: BorderSide(
+                            color: isSelected
+                                ? colorScheme.primary
+                                : colorScheme.outline.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        elevation: isSelected ? 2 : 0,
+                        pressElevation: 4,
+                      );
+                    }).toList(),
                   ),
                   SizedBox(height: 24),
 
@@ -433,48 +555,133 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ],
         ),
-        child: ElevatedButton.icon(
-          icon: Icon(
-            Icons.add_shopping_cart_rounded,
-            color: colorScheme.onPrimary,
-            size: 20,
-          ),
-          label: Text('Añadir al Carrito'),
-          onPressed: () {
-            widget.cartService.addItem(widget.product);
-            HapticFeedback.lightImpact();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${widget.product.name} añadido al carrito'),
-                backgroundColor: colorScheme.secondary,
-                behavior: SnackBarBehavior.floating,
-                margin: EdgeInsets.only(
-                  bottom:
-                      MediaQuery.of(context).size.height *
-                      0.12, // Sube el SnackBar
-                  left: 20,
-                  right: 20,
+        child: Row(
+          // Usamos Row para el selector de cantidad y el botón
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // --- SELECTOR DE CANTIDAD ---
+            Container(
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withOpacity(
+                  0.1,
+                ), // Un fondo muy sutil del color primario
+                borderRadius: BorderRadius.circular(
+                  12.0,
+                ), // Bordes redondeados para el grupo
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      Icons.remove_rounded,
+                      color: colorScheme.primary,
+                    ),
+                    onPressed: () {
+                      _decrementQuantity();
+                      HapticFeedback.lightImpact();
+                    },
+                    iconSize: 22,
+                    splashRadius: 20,
+                    constraints: BoxConstraints(),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                  Container(
+                    // Separador vertical sutil
+                    height: 20,
+                    width: 1,
+                    color: colorScheme.primary.withOpacity(0.1),
+                    margin: EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      '$_selectedQuantity',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    // Separador vertical sutil
+                    height: 20,
+                    width: 1,
+                    color: colorScheme.primary.withOpacity(0.1),
+                    margin: EdgeInsets.symmetric(vertical: 6),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.add_rounded, color: colorScheme.primary),
+                    onPressed: () {
+                      _incrementQuantity();
+                      HapticFeedback.lightImpact();
+                    },
+                    iconSize: 22,
+                    splashRadius: 20,
+                    constraints: BoxConstraints(),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 16),
+
+            // --- BOTÓN AÑADIR AL CARRITO ---
+            Expanded(
+              child: ElevatedButton.icon(
+                icon: Icon(
+                  Icons.add_shopping_cart_rounded,
+                  color: colorScheme.onPrimary,
+                  size: 20,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                label: Text('Añadir al Carrito'),
+                onPressed: () {
+                  widget.cartService.addItem(
+                    widget.product,
+                    quantity: _selectedQuantity,
+                    selectedSize:
+                        _selectedSize, // Pasando el tamaño seleccionado
+                    priceAtTimeOfAdding:
+                        _currentPrice, // Pasando el precio actual
+                  );
+                  HapticFeedback.lightImpact();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${widget.product.name} (x$_selectedQuantity) añadido al carrito',
+                      ),
+                      backgroundColor: colorScheme.secondary,
+                      behavior: SnackBarBehavior.floating,
+                      margin: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).size.height * 0.12,
+                        left: 20,
+                        right: 20,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primary,
+                  foregroundColor: colorScheme.onPrimary,
+                  padding: EdgeInsets.symmetric(vertical: 16), // Botón más alto
+                  textStyle: textTheme.labelLarge?.copyWith(
+                    fontSize: 16, // Tamaño de texto del botón
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  elevation: 3,
                 ),
               ),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: colorScheme.primary,
-            foregroundColor: colorScheme.onPrimary,
-            padding: EdgeInsets.symmetric(vertical: 16),
-            textStyle: textTheme.labelLarge?.copyWith(
-              fontSize: 16.5,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
             ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            elevation: 2,
-          ),
+          ],
         ),
       ),
     );

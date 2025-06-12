@@ -1,5 +1,6 @@
 // lib/src/data/mock_data.dart
 import 'models/product_model.dart'; // Importa tu modelo
+import 'package:food_app_portfolio/src/data/models/address_model.dart';
 
 class MockData {
   static final List<ProductModel> products = [
@@ -11,7 +12,7 @@ class MockData {
           'La auténtica pizza italiana con tomate fresco, mozzarella y albahaca.',
       price: 8.99,
       imageUrl:
-          'https://images.pexels.com/photos/1566837/pexels-photo-1566837.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
+          'https://assets.surlatable.com/m/15a89c2d9c6c1345/72_dpi_webp-REC-283110_Pizza.jpg', // Reemplaza con una URL real
       category: ProductCategory.pizza,
       size: ProductSize.mediano,
       ingredients: [
@@ -59,8 +60,7 @@ class MockData {
       description:
           'Una explosión de sabor vegetal con pimientos, champiñones, cebolla y aceitunas.',
       price: 9.75,
-      imageUrl:
-          'https://images.pexels.com/photos/3764990/pexels-photo-3764990.jpeg?auto=compress&cs=tinysrgb&w=600', // Reemplaza con una URL real
+      imageUrl: 'assets/images/pizza4.png', // Reemplaza con una URL real
       category: ProductCategory.pizza,
       size: ProductSize.extraGrande,
       ingredients: [
@@ -174,4 +174,37 @@ class MockData {
     // return products.firstWhere((product) => product.id == id, orElse: () => null);
     // En este caso, como ProductModel? PUEDE ser null, el orElse: () => null ya es válido.
   }
+
+  static List<AddressModel> userAddresses = [
+    AddressModel(
+      id: 'addr1',
+      alias: 'Casa',
+      streetAddress: 'Av. Siempre Viva 742',
+      city: 'Springfield',
+      stateOrProvince: 'IL',
+      postalCode: '62704',
+      country: 'EE.UU.',
+      type: AddressType.home,
+      isPrimary: true,
+    ),
+    AddressModel(
+      id: 'addr2',
+      alias: 'Oficina',
+      streetAddress: 'Calle Principal 123, Piso 5',
+      city: 'Bogotá',
+      stateOrProvince: 'Cundinamarca',
+      postalCode: '110111',
+      country: 'Colombia',
+      type: AddressType.work,
+    ),
+    AddressModel(
+      id: 'addr3',
+      alias: 'Casa de Mamá',
+      streetAddress: 'Carrera 15 # 80 - 20',
+      city: 'Medellín',
+      stateOrProvince: 'Antioquia',
+      postalCode: '050021',
+      country: 'Colombia',
+    ),
+  ];
 }

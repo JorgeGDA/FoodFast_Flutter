@@ -5,6 +5,7 @@ enum ProductCategory {
   burger,
   drink, // Podríamos añadir más luego
   side, // Acompañamientos
+  icecream, // Acompañamientos
 }
 
 enum ProductSize { pequeno, mediano, grande, extraGrande }
@@ -44,6 +45,21 @@ class ProductModel {
 
   String get sizeText {
     switch (size) {
+      case ProductSize.pequeno:
+        return 'Pequeño';
+      case ProductSize.mediano:
+        return 'Mediano';
+      case ProductSize.grande:
+        return 'Grande';
+      case ProductSize.extraGrande:
+        return 'Extra Grande';
+      default:
+        return '';
+    }
+  }
+
+  static String getSizeTextStatic(ProductSize productSize) {
+    switch (productSize) {
       case ProductSize.pequeno:
         return 'Pequeño';
       case ProductSize.mediano:

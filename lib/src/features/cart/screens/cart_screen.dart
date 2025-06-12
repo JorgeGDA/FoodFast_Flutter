@@ -13,10 +13,10 @@ class CartScreen extends StatelessWidget {
   final VoidCallback navigateToHome;
 
   const CartScreen({
-    Key? key,
+    super.key,
     required this.cartService,
     required this.navigateToHome,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,12 +28,50 @@ class CartScreen extends StatelessWidget {
       valueListenable: cartService.itemsNotifier,
       builder: (context, cartItems, child) {
         return Scaffold(
+          // ...
           appBar: AppBar(
-            title: Text('Mi Carrito (${cartService.totalItemsCount})'),
-            // leading: IconButton(
-            //   icon: Icon(Icons.arrow_back_ios_new),
-            //   onPressed: () => Navigator.of(context).pop(),
-            // ),
+            backgroundColor: AppColors.background,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            centerTitle: false,
+            toolbarHeight: 55,
+            flexibleSpace: Container(
+              decoration: BoxDecoration(
+                color: colorScheme.surface,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(25.0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8.0,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+            ),
+            leadingWidth: 50,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 16.0),
+              child: Icon(
+                Icons.shopping_cart_outlined,
+                color: AppColors.primary,
+                size: 24,
+              ),
+            ),
+            title: ValueListenableBuilder<List<CartItemModel>>(
+              valueListenable: cartService.itemsNotifier,
+              builder: (context, cartItems, _) {
+                return Text(
+                  'Mi Carrito (${cartService.totalItemsCount})',
+                  style: TextStyle(
+                    color: AppColors.textPrimary, // Texto oscuro sobre blanco
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                );
+              },
+            ),
             actions: [
               if (cartItems.isNotEmpty)
                 IconButton(
@@ -70,6 +108,7 @@ class CartScreen extends StatelessWidget {
                 ),
             ],
           ),
+          // ...
           body: cartItems.isEmpty
               ? Center(
                   child: Column(
@@ -164,39 +203,88 @@ class CartScreen extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(
                                         10,
                                       ), // Bordes más redondeados para la imagen
-                                      child: Image.network(
-                                        item.product.imageUrl,
-                                        width: 80, // Imagen un poco más grande
-                                        height: 80,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder:
-                                            (
-                                              context,
-                                              child,
-                                              progress,
-                                            ) => progress == null
-                                            ? child
-                                            : Container(
-                                                width: 80,
-                                                height: 80,
-                                                child: Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                ),
-                                              ),
-                                        errorBuilder: (context, error, stack) =>
-                                            Container(
-                                              width: 80,
+                                      child:
+                                          item.product.imageUrl.startsWith(
+                                            'http',
+                                          )
+                                          ? Image.network(
+                                              item.product.imageUrl,
+                                              width:
+                                                  80, // Imagen un poco más grande
                                               height: 80,
-                                              color: Colors.grey[200],
-                                              child: Icon(
-                                                Icons.broken_image_outlined,
-                                                color: Colors.grey[400],
-                                              ),
+                                              fit: BoxFit.cover,
+                                              loadingBuilder:
+                                                  (
+                                                    context,
+                                                    child,
+                                                    progress,
+                                                  ) => progress == null
+                                                  ? child
+                                                  : SizedBox(
+                                                      width: 80,
+                                                      height: 80,
+                                                      child: Center(
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                              strokeWidth: 2,
+                                                            ),
+                                                      ),
+                                                    ),
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stack,
+                                                  ) => Container(
+                                                    width: 80,
+                                                    height: 80,
+                                                    color: Colors.grey[200],
+                                                    child: Icon(
+                                                      Icons
+                                                          .broken_image_outlined,
+                                                      color: Colors.grey[400],
+                                                    ),
+                                                  ),
+                                            )
+                                          : Image.asset(
+                                              item.product.imageUrl,
+                                              width:
+                                                  80, // Imagen un poco más grande
+                                              height: 80,
+                                              fit: BoxFit.cover,
+                                              // loadingBuilder:
+                                              //     (
+                                              //       context,
+                                              //       child,
+                                              //       progress,
+                                              //     ) => progress == null
+                                              //     ? child
+                                              //     : SizedBox(
+                                              //         width: 80,
+                                              //         height: 80,
+                                              //         child: Center(
+                                              //           child:
+                                              //               CircularProgressIndicator(
+                                              //                 strokeWidth: 2,
+                                              //               ),
+                                              //         ),
+                                              //       ),
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stack,
+                                                  ) => Container(
+                                                    width: 80,
+                                                    height: 80,
+                                                    color: Colors.grey[200],
+                                                    child: Icon(
+                                                      Icons
+                                                          .broken_image_outlined,
+                                                      color: Colors.grey[400],
+                                                    ),
+                                                  ),
                                             ),
-                                      ),
                                     ),
                                     SizedBox(width: 12),
                                     Expanded(
@@ -350,21 +438,6 @@ class CartScreen extends StatelessWidget {
                           ),
                           SizedBox(height: 24),
                           ElevatedButton(
-                            child: Padding(
-                              // Padding interno para el texto del botón
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12.0,
-                              ),
-                              child: Text(
-                                'Proceder al Pago',
-                                style: textTheme.labelLarge?.copyWith(
-                                  fontSize: 16, // Ajusta tamaño
-                                  color: AppColors.textOnPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
                             onPressed: cartItems.isEmpty
                                 ? null
                                 : () {
@@ -379,6 +452,21 @@ class CartScreen extends StatelessWidget {
                                 ), // Botón más redondeado "píldora"
                               ),
                               elevation: 2, // Sombra sutil para el botón
+                            ),
+                            child: Padding(
+                              // Padding interno para el texto del botón
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12.0,
+                              ),
+                              child: Text(
+                                'Proceder al Pago',
+                                style: textTheme.labelLarge?.copyWith(
+                                  fontSize: 16, // Ajusta tamaño
+                                  color: AppColors.textOnPrimary,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                             ),
                           ),
                         ],

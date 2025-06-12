@@ -24,10 +24,10 @@ class MyApp extends StatelessWidget {
   final FavoritesService favoritesService; // <--- NUEVO
 
   const MyApp({
-    Key? key,
+    super.key,
     required this.cartService,
     required this.favoritesService,
-  }) : super(key: key);
+  });
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -41,12 +41,10 @@ class MyApp extends StatelessWidget {
           primary: AppColors.primary,
           secondary: AppColors.accent, // Color de acento
           surface: AppColors.surface,
-          background: AppColors.background,
           error: AppColors.error,
           onPrimary: AppColors.textOnPrimary,
           onSecondary: AppColors.textOnAccent,
           onSurface: AppColors.textPrimary,
-          onBackground: AppColors.textPrimary,
           onError: AppColors
               .textOnPrimary, // O el color que prefieras para texto sobre error
         ),

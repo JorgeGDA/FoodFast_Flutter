@@ -1,9 +1,11 @@
 // lib/src/features/products/widgets/product_card.dart
+import 'package:elegant_notification/resources/arrays.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/product_model.dart';
 import 'package:food_app_portfolio/src/services/favorites_service.dart';
 import '../../../constants/app_colors.dart';
 import '../../../constants/app_text_styles.dart';
+import '/../../../utils/app_notifications.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -12,12 +14,12 @@ class ProductCard extends StatelessWidget {
   final FavoritesService favoritesService;
 
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     required this.onAddToCart,
     required this.onViewDetails,
     required this.favoritesService,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -40,7 +42,7 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: onViewDetails,
-      child: Container(
+      child: SizedBox(
         width: cardBaseWidth, // Ayuda a que el Stack tenga un tamaño base
         height: cardEstimatedHeight, // Damos una altura al contenedor del Stack
         child: Stack(
@@ -129,8 +131,28 @@ class ProductCard extends StatelessWidget {
                                 final bool isCurrentlyFavorite =
                                     favoritesService.isFavorite(product.id);
                                 return InkWell(
-                                  onTap: () =>
-                                      favoritesService.toggleFavorite(product),
+                                  onTap: () {
+                                    favoritesService.toggleFavorite(product);
+                                    // Mostramos la notificación desde aquí, ya que ProductCard tiene el contexto
+                                    final bool isNowFavorite = favoritesService
+                                        .isFavorite(product.id);
+                                    showAppNotification(
+                                      context: context,
+                                      title: isNowFavorite
+                                          ? '¡Favorito Añadido!'
+                                          : 'Favorito Eliminado',
+                                      description: isNowFavorite
+                                          ? '${product.name} ahora está en tus favoritos.'
+                                          : '${product.name} ya no está en tus favoritos.',
+                                      type: isNowFavorite
+                                          ? AppNotificationType.favorite
+                                          : AppNotificationType
+                                                .info, // O .warning para eliminar
+                                      position: Alignment
+                                          .bottomCenter, // Quizás abajo para esta acción
+                                      animation: AnimationType.fromBottom,
+                                    );
+                                  },
                                   borderRadius: BorderRadius.circular(20),
                                   child: Padding(
                                     padding: const EdgeInsets.all(5.0),
@@ -197,53 +219,106 @@ class ProductCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(
                     16.0,
                   ), // Bordes redondeados para la imagen
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(
-                        0.20,
-                      ), // Sombra más notoria para la imagen
-                      blurRadius: 16.0,
-                      // spreadRadius: -2.0, // Puedes jugar con esto
-                      offset: Offset(
-                        0,
-                        8.0,
-                      ), // Sombra que se proyecta hacia abajo
-                    ),
-                  ],
+                  // boxShadow: [
+                  //   BoxShadow(
+                  //     color: Colors.black.withOpacity(
+                  //       0.20,
+                  //     ), // Sombra más notoria para la imagen
+                  //     blurRadius: 16.0,
+                  //     // spreadRadius: -2.0, // Puedes jugar con esto
+                  //     offset: Offset(
+                  //       0,
+                  //       8.0,
+                  //     ), // Sombra que se proyecta hacia abajo
+                  //   ),
+                  // ],
                 ),
+
+                // ... (dentro del build method de ProductCard, donde está la imagen) ...
+                // Asumo que 'colorScheme' y 'imageHeight' están definidos en el alcance de este build method.
                 child: Hero(
                   tag: 'product_image_${product.id}',
                   child: ClipRRect(
-                    // Importante para que la imagen respete el borderRadius del Container
                     borderRadius: BorderRadius.circular(16.0),
-                    child: Image.network(
-                      product.imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, progress) =>
-                          progress == null
-                          ? child
-                          : Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: colorScheme.primary,
+                    child: product.imageUrl.startsWith('http')
+                        ? Image.network(
+                            // Si la URL comienza con http(s), usa Image.network
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            loadingBuilder:
+                                (
+                                  context,
+                                  child,
+                                  ImageChunkEvent? loadingProgress,
+                                ) {
+                                  if (loadingProgress == null)
+                                    return child; // Imagen cargada
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: colorScheme.primary,
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                              null
+                                          ? loadingProgress
+                                                    .cumulativeBytesLoaded /
+                                                loadingProgress
+                                                    .expectedTotalBytes!
+                                          : null, // Muestra progreso si está disponible
+                                    ),
+                                  );
+                                },
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16.0),
+                                color: Colors.grey[200],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons
+                                      .broken_image_outlined, // Icono para error de red
+                                  color: Colors.grey[400],
+                                  size: imageHeight * 0.5,
+                                ),
                               ),
                             ),
-                      errorBuilder: (context, error, stack) => Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16.0),
-                          color: Colors.grey[200],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            Icons.hide_image_outlined,
-                            color: Colors.grey[400],
-                            size: imageHeight * 0.5,
+                          )
+                        : Image.asset(
+                            // Si no, asume que es una ruta de asset local
+                            product.imageUrl,
+                            fit: BoxFit.cover,
+                            // El loadingBuilder para Image.asset no es tan relevante porque la carga es casi instantánea.
+                            // Lo podrías quitar o dejar un placeholder simple si quieres.
+                            // loadingBuilder: (context, child, progress) => progress == null ? child : Center(child: SizedBox(width:20, height:20, child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary))),
+                            errorBuilder:
+                                (
+                                  BuildContext context,
+                                  Object error,
+                                  StackTrace? stackTrace,
+                                ) {
+                                  // Este error se dispara si el asset no se encuentra o hay un problema al decodificarlo.
+                                  print(
+                                    'Error cargando asset: ${product.imageUrl}, Error: $error',
+                                  );
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      color: Colors.grey[200],
+                                    ),
+                                    child: Center(
+                                      child: Icon(
+                                        Icons
+                                            .image_not_supported_outlined, // Icono para asset no encontrado/erróneo
+                                        color: Colors.grey[400],
+                                        size: imageHeight * 0.5,
+                                      ),
+                                    ),
+                                  );
+                                },
                           ),
-                        ),
-                      ),
-                    ),
                   ),
                 ),
+                // ...
               ),
             ),
           ],

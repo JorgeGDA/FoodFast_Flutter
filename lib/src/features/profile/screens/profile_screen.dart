@@ -2,9 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:food_app_portfolio/src/features/profile/screens/edit_profile_screen.dart';
 import 'package:food_app_portfolio/src/constants/app_colors.dart'; // Asegúrate de tener tus colores
+import 'package:food_app_portfolio/src/features/profile/screens/addresses_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,11 +22,44 @@ class ProfileScreen extends StatelessWidget {
       // El AppBar ya se configura globalmente por el tema en MyApp
       // pero si necesitas un título específico para esta pantalla, puedes ponerlo:
       appBar: AppBar(
-        title: Text('Mi Perfil'),
-        // backgroundColor: AppColors.primary, // Ya debería tomarlo del tema
-        // titleTextStyle: TextStyle(color: AppColors.textOnPrimary, ...), // Ya debería tomarlo del tema
-        automaticallyImplyLeading:
-            false, // Si no quieres el botón de atrás de MainNavigator
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        toolbarHeight: 55,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(25.0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 8.0,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+        ),
+        leadingWidth: 50,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Icon(
+            Icons.person_outline_rounded,
+            color: AppColors.primary,
+            size: 28,
+          ),
+        ),
+        title: Text(
+          'Mi Perfil',
+          style: TextStyle(
+            color: AppColors.textPrimary, // Texto oscuro sobre blanco
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        actions: [
+          SizedBox(width: 56), // Espacio para balancear
+        ],
       ),
       body: SingleChildScrollView(
         physics:
@@ -92,10 +126,16 @@ class ProfileScreen extends StatelessWidget {
               icon: Icons.location_on_outlined,
               title: 'Direcciones Guardadas',
               onTap: () {
-                // TODO: Navegar a pantalla de direcciones
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegar a Direcciones (pendiente)')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // Si AddressesScreen necesita saber la dirección seleccionada en HomeScreen:
+                    // builder: (context) => AddressesScreen(initiallySelectedAddress: homeScreenSelectedAddress),
+                    // Por ahora, la mantenemos simple
+                    builder: (context) => AddressesScreen(),
+                  ),
                 );
+                // No necesitamos manejar el resultado aquí si la selección es solo para HomeScreen
               },
             ),
             const SizedBox(height: 20.0),
@@ -153,9 +193,8 @@ class ProfileScreen extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 55,
-            backgroundColor: colorScheme.primary.withOpacity(
-              0.2,
-            ), // Un fondo suave para el avatar
+            backgroundColor: colorScheme.primary,
+            // Un fondo suave para el avatar
             child: CircleAvatar(
               radius: 50,
               backgroundImage: AssetImage(avatarPath),

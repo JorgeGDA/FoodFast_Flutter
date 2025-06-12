@@ -14,11 +14,11 @@ class FavoritesScreen extends StatelessWidget {
   final VoidCallback navigateToHome; // Para el botón de explorar
 
   const FavoritesScreen({
-    Key? key,
+    super.key,
     required this.cartService,
     required this.favoritesService,
     required this.navigateToHome,
-  }) : super(key: key);
+  });
 
   Widget _buildSuggestionsSection(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -43,7 +43,7 @@ class FavoritesScreen extends StatelessWidget {
             style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
-        Container(
+        SizedBox(
           height: 290, // Ajustar según ProductCard
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
@@ -89,8 +89,80 @@ class FavoritesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mis Favoritos'),
-        automaticallyImplyLeading: false, // Controlado por MainNavigator
+        backgroundColor: AppColors.background,
+        elevation:
+            0, // La sombra la dará el shape y el container que lo envuelve (o directamente con elevation si funciona bien)
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        toolbarHeight:
+            55, // Un poco más de altura para que se vean bien las curvas y la sombra
+        shape: ContinuousRectangleBorder(
+          // Para la sombra y poder redondear esquinas inferiores
+          // No podemos redondear solo abajo con ContinuousRectangleBorder directamente en AppBar.
+          // Necesitaremos un enfoque diferente si queremos solo esquinas inferiores redondeadas
+          // o usar un AppBar personalizado.
+          // Por ahora, redondearemos todo y la sombra ayudará.
+          // borderRadius: BorderRadius.circular(20), // Redondea todas las esquinas
+        ),
+        // Para controlar la sombra y el redondeado inferior, es mejor un AppBar personalizado
+        // o engañar con un Container debajo. Vamos a probar con elevation y un shape más simple primero.
+
+        // Nuevo enfoque para el AppBar con esquinas inferiores redondeadas:
+        // Necesitamos un PreferredSize para un AppBar personalizado si queremos un shape complejo.
+        // Solución más simple si `shape` no da el efecto exacto:
+        // Dejar el AppBar estándar y poner un Container con el diseño *debajo* de él,
+        // pero esto no es lo ideal.
+
+        // Vamos a mantener el AppBar estándar y aplicar la sombra con elevation.
+        // El redondeo de solo esquinas inferiores es complicado con AppBar.shape estándar.
+        // Lo que SÍ podemos hacer es usar un `flexibleSpace` o un `bottom` para el diseño.
+
+        // OPCIÓN MÁS SIMPLE con AppBar estándar:
+        // No podremos redondear SOLO las esquinas inferiores con `shape` fácilmente.
+        // El `shape` aplica a todo el AppBar.
+        // Si quieres el efecto exacto de la imagen, necesitarías un `PreferredSize`
+        // con un `Container` que tenga `BoxDecoration` para el `borderRadius` inferior
+        // y la sombra, y el contenido del AppBar (icon, title) dentro de ese Container.
+
+        // INTENTO CON AppBar estándar y propiedades:
+        flexibleSpace: Container(
+          // Usamos flexibleSpace para simular el fondo con bordes
+          decoration: BoxDecoration(
+            color: colorScheme.surface, // Fondo blanco
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.circular(35.0), // REDONDEO SOLO ABAJO
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 9.0,
+                offset: Offset(0, 2), // Sombra hacia abajo
+              ),
+            ],
+          ),
+        ),
+        leadingWidth: 50,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0),
+          child: Icon(
+            Icons.favorite_outline_rounded, // Icono de Favoritos
+            color: AppColors.primary, // Color del icono (oscuro sobre blanco)
+            size: 28,
+          ),
+        ),
+        title: Text(
+          'Mis Favoritos',
+          style: TextStyle(
+            color: AppColors.textPrimary, // Texto oscuro sobre blanco
+            fontWeight: FontWeight.w600,
+            fontSize: 20, // El tema global debería manejarlo
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: 56,
+          ), // Espacio vacío para equilibrar el leading si no hay actions
+        ],
       ),
       body: ValueListenableBuilder<List<String>>(
         valueListenable: favoritesService.favoriteIdsNotifier,
