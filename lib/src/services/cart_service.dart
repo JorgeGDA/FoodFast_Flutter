@@ -18,62 +18,92 @@ class CartService {
     ProductSize? selectedSize,
     double? priceAtTimeOfAdding,
   }) {
-    // int index = _items.indexWhere(
-    //   (item) =>
-    //       item.product.id == product.id && item.selectedSize == selectedSize,
-    // );
-
-    final List<CartItemModel> currentItems = List.from(
-      _itemsNotifier.value,
-    ); // Copia para modificar
-    final index = currentItems.indexWhere(
-      (item) => item.product.id == product.id,
+    // Encuentra el ítem considerando el ID del producto Y el tamaño seleccionado
+    int index = items.indexWhere(
+      (item) =>
+          item.product.id == product.id &&
+          item.selectedSize ==
+              (selectedSize ??
+                  product
+                      .size), // Compara con el tamaño pasado o el por defecto del producto
     );
 
     if (index != -1) {
-      // El producto ya está en el carrito, actualiza la cantidad
-      currentItems[index].quantity += quantity;
+      items[index].quantity += quantity;
     } else {
-      // El producto no está en el carrito, añádelo
-      currentItems.add(
+      items.add(
         CartItemModel(
           id: product.id,
           product: product,
           quantity: quantity,
-          selectedSize:
-              selectedSize ??
-              product
-                  .size, // Usa el tamaño por defecto del producto si no se pasa
+          selectedSize: selectedSize ?? product.size,
           priceAtPurchase: priceAtTimeOfAdding ?? product.price,
         ),
       );
     }
-    _itemsNotifier.value = currentItems; // Notifica a los oyentes
-    // printCart(); // Para depuración
+    _itemsNotifier.value = List.from(items);
   }
 
   // Método para remover un producto del carrito
-  void removeItem(String productId) {
-    final List<CartItemModel> currentItems = List.from(_itemsNotifier.value);
-    currentItems.removeWhere((item) => item.product.id == productId);
-    _itemsNotifier.value = currentItems;
-    // printCart();
+  void removeItem(String productId, {ProductSize? selectedSize}) {
+    // Si selectedSize es null, esta lógica debería funcionar si los ítems en el carrito
+    // también tienen selectedSize como null para productos sin variantes de tamaño,
+    // o si solo comparas por productId cuando selectedSize no se proporciona.
+    // La clave es que la condición de eliminación coincida con cómo se identifican
+    // unívocamente los ítems en tu lista _items.
+
+    items.removeWhere((item) {
+      bool idMatches = item.product.id == productId;
+      bool sizeMatches =
+          true; // Asumir que el tamaño coincide si no se especifica o no es relevante
+
+      // Solo compara tamaños si ambos (el del item y el `selectedSize` pasado) están definidos.
+      // O si tu lógica requiere que siempre se pase un `selectedSize` para productos con variantes.
+      if (selectedSize != null && item.selectedSize != null) {
+        sizeMatches = item.selectedSize == selectedSize;
+      } else if (selectedSize != null && item.selectedSize == null) {
+        // Caso: intentando quitar un tamaño específico de un producto que no tiene tamaño en el carrito. No debería quitar.
+        sizeMatches = false;
+      } else if (selectedSize == null && item.selectedSize != null) {
+        // Caso: intentando quitar un producto genérico cuando en el carrito hay uno con tamaño específico.
+        // Esto depende de tu lógica. Si un producto solo puede estar una vez independientemente del tamaño,
+        // entonces no necesitarías `selectedSize` aquí.
+        // Pero si el mismo producto ID puede estar con diferentes tamaños, necesitas `selectedSize`.
+        // Para la key del Dismissible: `item.product.id + (item.selectedSize?.toString() ?? '')`
+        // implica que `selectedSize` ES parte de la identidad del ítem.
+        sizeMatches =
+            false; // No quitar si el item en carrito tiene tamaño y no se especificó cuál quitar.
+      }
+      // Si selectedSize es null Y item.selectedSize es null, sizeMatches sigue true.
+
+      return idMatches && sizeMatches;
+    });
+    _itemsNotifier.value = List.from(items); // ¡MUY IMPORTANTE notificar!
+    print("Item eliminado. Nuevo carrito: $items"); // Para debug
   }
 
   // Método para actualizar la cantidad de un ítem
-  void updateQuantity(String productId, int newQuantity) {
-    if (newQuantity <= 0) {
-      removeItem(productId);
-      return;
-    }
-    final List<CartItemModel> currentItems = List.from(_itemsNotifier.value);
-    final index = currentItems.indexWhere(
-      (item) => item.product.id == productId,
+  void updateQuantity(
+    String productId,
+    int newQuantity, {
+    ProductSize? selectedSize,
+  }) {
+    // Encuentra el ítem considerando el ID del producto Y el tamaño seleccionado
+    // Si selectedSize es null en el CartItem, y aquí también es null, coincidirán.
+    // Si el producto en el carrito NO tiene tamaño (selectedSize es null), y aquí pasamos un tamaño, NO coincidirán.
+    // La lógica de búsqueda debe ser consistente con cómo se añaden.
+    int index = items.indexWhere(
+      (item) =>
+          item.product.id == productId && item.selectedSize == selectedSize,
     );
+
     if (index != -1) {
-      currentItems[index].quantity = newQuantity;
-      _itemsNotifier.value = currentItems;
-      // printCart();
+      if (newQuantity <= 0) {
+        items.removeAt(index);
+      } else {
+        items[index].quantity = newQuantity;
+      }
+      _itemsNotifier.value = List.from(items);
     }
   }
 
@@ -91,6 +121,17 @@ class CartService {
   // Getter para el número total de ítems (no productos únicos, sino unidades)
   int get totalItemsCount {
     return items.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  // --- NUEVO: COSTO DE ENVÍO (EJEMPLO) ---
+  double get shippingCost {
+    if (items.isEmpty) return 0.0; // Sin envío si no hay ítems
+    return 2.50; // Costo de envío fijo de ejemplo
+  }
+
+  // --- ACTUALIZADO: PRECIO TOTAL ---
+  double get totalPrice {
+    return subtotal + shippingCost; // Ahora incluye el costo de envío
   }
 
   // Para depuración

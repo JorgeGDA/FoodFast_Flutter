@@ -1,5 +1,6 @@
 // lib/src/features/cart/screens/cart_screen.dart
 import 'package:flutter/material.dart';
+import 'package:food_app_portfolio/src/data/models/product_model.dart';
 import '../../../services/cart_service.dart';
 import '../../../data/models/cart_item_model.dart';
 // Importa tus estilos si los necesitas
@@ -18,10 +19,63 @@ class CartScreen extends StatelessWidget {
     required this.navigateToHome,
   });
 
+  // <--- 3. DEFINIR _buildSummaryRow COMO MÉTODO DE LA CLASE --->
+  Widget _buildSummaryRow(
+    BuildContext context,
+    String label,
+    double value,
+    TextStyle? labelStyle,
+    TextStyle? valueStyle,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: <Widget>[
+        Text(label, style: labelStyle ?? Theme.of(context).textTheme.bodyLarge),
+        Text(
+          value == 0.0 && label == "Costo de Envío:"
+              ? 'Gratis'
+              : '\$${value.toStringAsFixed(2)}', // Condición para "Gratis"
+          style:
+              valueStyle ??
+              Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+
+  // <--- MÉTODO DE CONFIRMACIÓN PARA VACIAR CARRITO (ASEGÚRATE QUE ESTÉ AQUÍ) --->
+  void _showClearCartConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Confirmar'),
+        content: Text('¿Seguro que quieres vaciar el carrito?'),
+        actions: <Widget>[
+          TextButton(
+            child: Text('Cancelar'),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+          TextButton(
+            child: Text('Vaciar', style: TextStyle(color: Colors.red)),
+            onPressed: () {
+              cartService.clearCart();
+              Navigator.of(ctx).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
+
+    const String placeholderAddress = "Av. Siempre Viva 742, Springfield";
+    final String displayAddress = /*selectedAddress ??*/ placeholderAddress;
 
     // Usamos ValueListenableBuilder para escuchar los cambios en el carrito y reconstruir
     return ValueListenableBuilder<List<CartItemModel>>(
@@ -76,8 +130,10 @@ class CartScreen extends StatelessWidget {
               if (cartItems.isNotEmpty)
                 IconButton(
                   icon: Icon(Icons.delete_sweep_outlined),
+
                   tooltip: 'Vaciar carrito',
                   onPressed: () {
+                    // _showClearCartConfirmationDialog(context),
                     // Confirmación antes de vaciar
                     showDialog(
                       context: context,
@@ -153,6 +209,42 @@ class CartScreen extends StatelessWidget {
                 )
               : Column(
                   children: [
+                    // --- SECCIÓN DE DIRECCIÓN DE ENTREGA ---
+                    // Padding(
+                    //   padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                    //   child: Row(
+                    //     children: [
+                    //       Icon(
+                    //         Icons.location_on_outlined,
+                    //         color: colorScheme.primary,
+                    //         size: 22,
+                    //       ),
+                    //       SizedBox(width: 8),
+                    //       Text(
+                    //         "Entregar en: ",
+                    //         style: textTheme.bodyMedium?.copyWith(
+                    //           color: Colors.grey[700],
+                    //         ),
+                    //       ),
+                    //       Expanded(
+                    //         child: Text(
+                    //           displayAddress,
+                    //           style: textTheme.bodyMedium?.copyWith(
+                    //             fontWeight: FontWeight.w600,
+                    //             color: colorScheme.onSurface,
+                    //           ),
+                    //           overflow: TextOverflow.ellipsis,
+                    //         ),
+                    //       ),
+                    //       Icon(
+                    //         Icons.arrow_forward_ios_rounded,
+                    //         size: 16,
+                    //         color: Colors.grey[600],
+                    //       ), // Para cambiar dirección
+                    //     ],
+                    //   ),
+                    // ),
+                    // Divider(indent: 16, endIndent: 16, height: 1),
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.only(top: 8, bottom: 8),
@@ -160,10 +252,18 @@ class CartScreen extends StatelessWidget {
                         itemBuilder: (ctx, index) {
                           final item = cartItems[index];
                           return Dismissible(
-                            key: ValueKey(item.id),
+                            key: ValueKey(
+                              item.product.id +
+                                  (item.selectedSize?.toString() ?? ''),
+                            ), // Key única
                             direction: DismissDirection.endToStart,
                             onDismissed: (direction) {
-                              cartService.removeItem(item.product.id);
+                              // Pasar el productId Y el selectedSize para asegurar que se elimina el ítem correcto
+                              cartService.removeItem(
+                                item.product.id,
+                                selectedSize: item
+                                    .selectedSize, // <--- PASAR EL TAMAÑO DEL ÍTEM
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
@@ -200,57 +300,75 @@ class CartScreen extends StatelessWidget {
                                 child: Row(
                                   children: [
                                     ClipRRect(
-                                      borderRadius: BorderRadius.circular(
-                                        10,
-                                      ), // Bordes más redondeados para la imagen
+                                      borderRadius: BorderRadius.circular(17),
+                                      // Bordes más redondeados para la imagen
                                       child:
                                           item.product.imageUrl.startsWith(
                                             'http',
                                           )
-                                          ? Image.network(
-                                              item.product.imageUrl,
-                                              width:
-                                                  80, // Imagen un poco más grande
-                                              height: 80,
-                                              fit: BoxFit.cover,
-                                              loadingBuilder:
-                                                  (
-                                                    context,
-                                                    child,
-                                                    progress,
-                                                  ) => progress == null
-                                                  ? child
-                                                  : SizedBox(
+                                          ? Container(
+                                              decoration: BoxDecoration(
+                                                // color: colorScheme.surface,
+                                                // borderRadius:
+                                                //     BorderRadius.vertical(
+                                                //       bottom: Radius.circular(
+                                                //         25.0,
+                                                //       ),
+                                                //     ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withOpacity(0.3),
+                                                    blurRadius: 8.0,
+                                                    offset: Offset(0, 9),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Image.network(
+                                                item.product.imageUrl,
+                                                width:
+                                                    95, // Imagen un poco más grande
+                                                height: 95,
+                                                fit: BoxFit.cover,
+                                                loadingBuilder:
+                                                    (
+                                                      context,
+                                                      child,
+                                                      progress,
+                                                    ) => progress == null
+                                                    ? child
+                                                    : SizedBox(
+                                                        width: 80,
+                                                        height: 80,
+                                                        child: Center(
+                                                          child:
+                                                              CircularProgressIndicator(
+                                                                strokeWidth: 2,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stack,
+                                                    ) => Container(
                                                       width: 80,
                                                       height: 80,
-                                                      child: Center(
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                            ),
+                                                      color: Colors.grey[200],
+                                                      child: Icon(
+                                                        Icons
+                                                            .broken_image_outlined,
+                                                        color: Colors.grey[400],
                                                       ),
                                                     ),
-                                              errorBuilder:
-                                                  (
-                                                    context,
-                                                    error,
-                                                    stack,
-                                                  ) => Container(
-                                                    width: 80,
-                                                    height: 80,
-                                                    color: Colors.grey[200],
-                                                    child: Icon(
-                                                      Icons
-                                                          .broken_image_outlined,
-                                                      color: Colors.grey[400],
-                                                    ),
-                                                  ),
+                                              ),
                                             )
                                           : Image.asset(
                                               item.product.imageUrl,
                                               width:
-                                                  80, // Imagen un poco más grande
-                                              height: 80,
+                                                  100, // Imagen un poco más grande
+                                              height: 110,
                                               fit: BoxFit.cover,
                                               // loadingBuilder:
                                               //     (
@@ -301,9 +419,24 @@ class CartScreen extends StatelessWidget {
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
+                                          // if (item.selectedSize !=
+                                          //     null) // Mostrar tamaño si existe
+                                          //   Padding(
+                                          //     padding: const EdgeInsets.only(
+                                          //       top: 2.0,
+                                          //     ),
+                                          //     child: Text(
+                                          //       'Tamaño: ${ProductModel.getSizeTextStatic(item.selectedSize!)}',
+                                          //       style: textTheme.bodySmall
+                                          //           ?.copyWith(
+                                          //             color: Colors.grey[600],
+                                          //           ),
+                                          //     ),
+                                          //   ),
                                           SizedBox(height: 4),
                                           Text(
-                                            'Precio: \$${item.product.price.toStringAsFixed(2)}',
+                                            // Muestra el precio unitario del tamaño específico si lo guardaste
+                                            'Precio: \$${(item.priceAtPurchase ?? item.product.price).toStringAsFixed(2)}',
                                             style: textTheme.bodySmall
                                                 ?.copyWith(
                                                   color: textTheme
@@ -316,17 +449,22 @@ class CartScreen extends StatelessWidget {
                                           QuantitySelector(
                                             quantity: item.quantity,
                                             onIncrement: () {
+                                              // <--- 2. AJUSTE/VERIFICACIÓN AQUÍ (ver CartService más abajo) --->
                                               cartService.updateQuantity(
                                                 item.product.id,
                                                 item.quantity + 1,
+                                                selectedSize: item
+                                                    .selectedSize, // Pasando como parámetro nombrado
                                               );
                                             },
                                             onDecrement: () {
+                                              // <--- 2. AJUSTE/VERIFICACIÓN AQUÍ (ver CartService más abajo) --->
                                               cartService.updateQuantity(
                                                 item.product.id,
                                                 item.quantity - 1,
+                                                selectedSize: item
+                                                    .selectedSize, // Pasando como parámetro nombrado
                                               );
-                                              // updateQuantity ya maneja la eliminación si la cantidad es <= 0
                                             },
                                             iconColor: colorScheme.primary,
                                             iconSize: 18,
@@ -335,8 +473,8 @@ class CartScreen extends StatelessWidget {
                                       ),
                                     ),
                                     SizedBox(width: 10),
-                                    // Precio total del ítem
                                     Text(
+                                      // Precio total del ítem (cantidad * precio unitario)
                                       '\$${item.totalPrice.toStringAsFixed(2)}',
                                       style: textTheme.titleMedium?.copyWith(
                                         fontWeight: FontWeight.bold,
@@ -355,119 +493,204 @@ class CartScreen extends StatelessWidget {
                       ),
                     ),
                     // Resumen del Carrito y Botón de Checkout
+                    // --- SECCIÓN DE RESUMEN Y PAGO ---
                     Container(
                       padding: EdgeInsets.only(
-                        left: 20,
-                        right: 20,
-                        top: 20,
-                        bottom: MediaQuery.of(context).padding.bottom + 16,
-                      ), // Padding seguro para la barra inferior
+                        left: 16,
+                        right: 16,
+                        top: 16, // Padding reducido
+                        bottom:
+                            MediaQuery.of(context).padding.bottom +
+                            12, // Padding inferior seguro y compacto
+                      ),
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).scaffoldBackgroundColor, // Color de fondo del scaffold para que se funda
-                        border: Border(
-                          // Borde superior sutil
-                          top: BorderSide(
-                            color: AppColors.divider.withOpacity(0.5),
-                            width: 1.0,
-                          ),
-                        ),
+                        color: colorScheme.surface,
                         boxShadow: [
-                          // Sombra más pronunciada y difusa
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withOpacity(
+                              0.08,
+                            ), // Sombra más sutil
                             spreadRadius: 0,
-                            blurRadius: 20,
-                            offset: Offset(0, -10),
+                            blurRadius: 10,
+                            offset: Offset(0, -3),
                           ),
                         ],
-                        // No necesitamos borderRadius aquí si queremos que se funda con el fondo
-                        // y solo tenga el borde superior.
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20.0),
+                        ), // Radio de borde más pequeño
                       ),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize
+                            .min, // Clave para que la columna no se expanda innecesariamente
                         children: [
+                          // --- DIRECCIÓN DE ENTREGA ---
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text('Subtotal:', style: textTheme.titleMedium),
-                              Text(
-                                '\$${cartService.subtotal.toStringAsFixed(2)}',
-                                style: textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.location_on_outlined,
+                                color: colorScheme.primary,
+                                size: 20,
+                              ), // Icono más pequeño
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "Entregar en:",
+                                      style: textTheme.bodySmall?.copyWith(
+                                        color: Colors.grey[600],
+                                        fontSize: 11,
+                                      ),
+                                    ), // Fuente más pequeña
+                                    SizedBox(height: 1),
+                                    Text(
+                                      displayAddress, // Asumo que displayAddress está definido
+                                      style: textTheme.bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        color: colorScheme.onSurface,
+                                        fontSize: 13,
+                                      ), // Fuente más pequeña
+                                      maxLines:
+                                          1, // Una línea para compactar, o 2 si es necesario
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              TextButton(
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Cambiar dirección (pendiente)",
+                                      ),
+                                    ),
+                                  );
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ), // Padding del botón reducido
+                                  minimumSize: Size(
+                                    0,
+                                    28,
+                                  ), // Altura mínima reducida
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  textStyle: textTheme.labelSmall?.copyWith(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ), // Texto del botón más pequeño
+                                ),
+                                child: Text(
+                                  "Cambiar",
+                                  style: TextStyle(color: colorScheme.primary),
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
-                          // Aquí podrías añadir "Costo de Envío" o "Descuentos" si los tuvieras
-                          // Ejemplo:
-                          // if (costoEnvio > 0)
-                          //   Row(
-                          //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          //     children: <Widget>[
-                          //       Text('Envío:', style: textTheme.bodyLarge),
-                          //       Text('\$${costoEnvio.toStringAsFixed(2)}', style: textTheme.bodyLarge),
-                          //     ],
-                          //   ),
-                          // SizedBox(height: costoEnvio > 0 ? 8 : 0),
                           Divider(
                             height: 20,
-                            thickness: 1,
-                            color: AppColors.divider.withOpacity(0.3),
+                            thickness: 0.8,
+                            color: AppColors.divider.withOpacity(0.2),
                           ),
+
+                          // --- RESUMEN DE COSTOS ---
+                          _buildSummaryRow(
+                            context,
+                            "Subtotal:",
+                            cartService.subtotal,
+                            textTheme.bodyMedium?.copyWith(fontSize: 13),
+                            textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          SizedBox(height: 6), // Espacio reducido
+                          _buildSummaryRow(
+                            context,
+                            "Costo de Envío:",
+                            cartService.shippingCost,
+                            textTheme.bodyMedium?.copyWith(fontSize: 13),
+                            textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+
+                          SizedBox(height: 12), // Espacio antes del total/botón
+                          // --- FILA DE TOTAL Y BOTÓN DE PAGO ---
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: <Widget>[
-                              Text(
-                                'Total:',
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            crossAxisAlignment: CrossAxisAlignment
+                                .center, // Alinear verticalmente
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Total:',
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[600],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${cartService.totalPrice.toStringAsFixed(2)}',
+                                    style: textTheme.titleLarge?.copyWith(
+                                      // Mantenemos el total un poco más grande
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.primary,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              Text(
-                                '\$${cartService.subtotal.toStringAsFixed(2)}', // Actualizar si hay envío/descuentos
-                                style: textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: colorScheme.primary,
+                              SizedBox(
+                                width: 12,
+                              ), // Espacio entre total y botón
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: cartItems.isEmpty
+                                      ? null
+                                      : () {
+                                          print('Procediendo al pago...');
+                                        },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: colorScheme.primary,
+                                    foregroundColor: colorScheme.onPrimary,
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 10.0,
+                                    ), // Padding vertical del botón reducido
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10.0),
+                                    ), // Bordes un poco menos redondeados
+                                    textStyle: textTheme.labelLarge?.copyWith(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ), // Texto del botón más pequeño
+                                    elevation: 1.5,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text('Proceder al Pago'),
+                                      SizedBox(width: 6),
+                                      Icon(
+                                        Icons.arrow_forward_rounded,
+                                        size: 18,
+                                      ), // Icono del botón más pequeño
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
-                          SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: cartItems.isEmpty
-                                ? null
-                                : () {
-                                    // Lógica para el checkout (próximamente)
-                                    print('Procediendo al pago...');
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  30,
-                                ), // Botón más redondeado "píldora"
-                              ),
-                              elevation: 2, // Sombra sutil para el botón
-                            ),
-                            child: Padding(
-                              // Padding interno para el texto del botón
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 12.0,
-                              ),
-                              child: Text(
-                                'Proceder al Pago',
-                                style: textTheme.labelLarge?.copyWith(
-                                  fontSize: 16, // Ajusta tamaño
-                                  color: AppColors.textOnPrimary,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
                           ),
                         ],
                       ),

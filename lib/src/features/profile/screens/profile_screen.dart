@@ -3,9 +3,118 @@ import 'package:flutter/material.dart';
 import 'package:food_app_portfolio/src/features/profile/screens/edit_profile_screen.dart';
 import 'package:food_app_portfolio/src/constants/app_colors.dart'; // Asegúrate de tener tus colores
 import 'package:food_app_portfolio/src/features/profile/screens/addresses_screen.dart';
+import 'package:food_app_portfolio/src/features/auth/screens/login_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({
+    Key? key,
+    // required this.cartService,
+    // required this.navigateToCartTab,
+  }) : super(key: key);
+  @override
+  _ProfileScreenState createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  // --- ESTADO DE AUTENTICACIÓN SIMULADO ---
+  bool _isLoggedIn = false; // Por defecto, no ha iniciado sesión
+
+  // Datos de usuario (solo se usan si _isLoggedIn es true)
+  String _userName = "Carlos Rojas";
+  String _userEmail = "carlos.rojas@example.com";
+  String _avatarPath = "assets/images/avatar.png"; // Tu avatar local
+
+  void _handleLoginSuccess(String name, String email, String avatar) {
+    setState(() {
+      _isLoggedIn = true;
+      _userName = name;
+      _userEmail = email;
+      _avatarPath = avatar; // Si la imagen de perfil cambia con el login
+    });
+  }
+
+  void _handleLogout() {
+    // TODO: Implementar lógica real de logout con el servicio de autenticación
+    setState(() {
+      _isLoggedIn = false;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Sesión cerrada (simulado)')));
+  }
+
+  void _navigateToLogin() async {
+    final result = await Navigator.push(
+      context,
+      PageRouteBuilder(
+        // <--- USAR PageRouteBuilder
+        pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          // Puedes usar la misma _slideTransition o crear una específica
+          const begin = Offset(0.0, 1.0); // Desde abajo hacia arriba
+          const end = Offset.zero;
+          const curve = Curves.easeOutQuint;
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          return SlideTransition(
+            position: animation.drive(tween),
+            child: FadeTransition(
+              opacity: animation,
+              child: child,
+            ), // Añadir Fade también
+          );
+        },
+        transitionDuration: Duration(
+          milliseconds: 500,
+        ), // Duración de la transición
+      ),
+    );
+
+    if (result != null && result is Map<String, String>) {
+      _handleLoginSuccess(
+        result['name'] ?? 'Usuario Ejemplo',
+        result['email'] ?? 'usuario@example.com',
+        result['avatar'] ?? _avatarPath,
+      );
+    }
+  }
+
+  Widget _buildLogoutButton(BuildContext context, ColorScheme colorScheme) {
+    return _buildProfileOptionCard(
+      context: context,
+      icon: Icons.logout_rounded,
+      title: 'Cerrar Sesión',
+      onTap: () {
+        // <--- CAMBIO AQUÍ
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Cerrar Sesión'),
+            content: Text('¿Estás seguro de que quieres cerrar sesión?'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Cancelar'),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+              TextButton(
+                child: Text(
+                  'Sí, Cerrar Sesión',
+                  style: TextStyle(color: colorScheme.error),
+                ),
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _handleLogout(); // Llama al método de logout del estado
+                },
+              ),
+            ],
+          ),
+        );
+      },
+      isDestructive: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,116 +170,184 @@ class ProfileScreen extends StatelessWidget {
           SizedBox(width: 56), // Espacio para balancear
         ],
       ),
-      body: SingleChildScrollView(
-        physics:
-            BouncingScrollPhysics(), // Efecto de rebote agradable en el scroll
-        padding: const EdgeInsets.symmetric(vertical: 20.0),
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.stretch, // Estirar hijos horizontalmente
-          children: <Widget>[
-            // --- 1. HEADER DEL PERFIL ---
-            _buildProfileHeader(
+      body: _isLoggedIn
+          ? _buildLoggedInProfileView(
               context,
+              colorScheme,
+              textTheme,
               userName,
               userEmail,
               localAvatarPath,
+            ) // Vista si está logueado
+          : _buildLoggedOutView(
+              context,
               colorScheme,
               textTheme,
-            ),
-            const SizedBox(height: 24.0),
+            ), // Vista si NO está logueado
+    );
+  }
 
-            // --- 2. SECCIÓN DE OPCIONES DE CUENTA ---
-            _buildSectionTitle(context, "Cuenta", textTheme),
-            _buildProfileOptionCard(
-              context: context,
-              icon: Icons.person_outline_rounded,
-              title: 'Editar Perfil',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => EditProfileScreen(
-                      currentName: userName, // Pasa los datos actuales
-                      currentEmail: userEmail,
-                      currentAvatarPath: localAvatarPath,
-                    ),
-                  ),
-                );
-                // .then((updatedData) {
-                //   // Opcional: Si EditProfileScreen devuelve datos, actualiza el estado aquí
-                //   if (updatedData != null && updatedData is Map) {
-                //     setState(() {
-                //       // Aquí tendrías que hacer que userName, userEmail, localAvatarPath
-                //       // sean variables de estado de ProfileScreen si quieres que se actualicen en vivo.
-                //       // Por ahora, ProfileScreen es StatelessWidget, así que esto es más complejo.
-                //       // print("Datos actualizados recibidos: $updatedData");
-                //     });
-                //   }
-                // });
-              },
-            ),
-            _buildProfileOptionCard(
-              context: context,
-              icon: Icons.receipt_long_outlined,
-              title: 'Mis Pedidos',
-              onTap: () {
-                // TODO: Navegar a pantalla de historial de pedidos
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegar a Mis Pedidos (pendiente)')),
-                );
-              },
-            ),
-            _buildProfileOptionCard(
-              context: context,
-              icon: Icons.location_on_outlined,
-              title: 'Direcciones Guardadas',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    // Si AddressesScreen necesita saber la dirección seleccionada en HomeScreen:
-                    // builder: (context) => AddressesScreen(initiallySelectedAddress: homeScreenSelectedAddress),
-                    // Por ahora, la mantenemos simple
-                    builder: (context) => AddressesScreen(),
-                  ),
-                );
-                // No necesitamos manejar el resultado aquí si la selección es solo para HomeScreen
-              },
-            ),
-            const SizedBox(height: 20.0),
+  Widget _buildLoggedInProfileView(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+    userName,
+    userEmail,
+    localAvatarPath,
+  ) {
+    return SingleChildScrollView(
+      physics:
+          BouncingScrollPhysics(), // Efecto de rebote agradable en el scroll
+      padding: const EdgeInsets.symmetric(vertical: 20.0),
+      child: Column(
+        crossAxisAlignment:
+            CrossAxisAlignment.stretch, // Estirar hijos horizontalmente
+        children: <Widget>[
+          // --- 1. HEADER DEL PERFIL ---
+          _buildProfileHeader(
+            context,
+            userName,
+            userEmail,
+            localAvatarPath,
+            colorScheme,
+            textTheme,
+          ),
+          const SizedBox(height: 24.0),
 
-            // --- 3. SECCIÓN DE CONFIGURACIÓN Y AYUDA ---
-            _buildSectionTitle(context, "Aplicación", textTheme),
-            _buildProfileOptionCard(
-              context: context,
-              icon: Icons.settings_outlined,
-              title: 'Configuración',
-              onTap: () {
-                // TODO: Navegar a pantalla de configuración
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Navegar a Configuración (pendiente)'),
+          // --- 2. SECCIÓN DE OPCIONES DE CUENTA ---
+          _buildSectionTitle(context, "Cuenta", textTheme),
+          _buildProfileOptionCard(
+            context: context,
+            icon: Icons.person_outline_rounded,
+            title: 'Editar Perfil',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileScreen(
+                    currentName: userName, // Pasa los datos actuales
+                    currentEmail: userEmail,
+                    currentAvatarPath: localAvatarPath,
                   ),
-                );
-              },
-            ),
-            _buildProfileOptionCard(
-              context: context,
-              icon: Icons.help_outline_rounded,
-              title: 'Centro de Ayuda',
-              onTap: () {
-                // TODO: Navegar a pantalla de ayuda
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Navegar a Ayuda (pendiente)')),
-                );
-              },
-            ),
-            const SizedBox(height: 30.0),
+                ),
+              );
+              // .then((updatedData) {
+              //   // Opcional: Si EditProfileScreen devuelve datos, actualiza el estado aquí
+              //   if (updatedData != null && updatedData is Map) {
+              //     setState(() {
+              //       // Aquí tendrías que hacer que userName, userEmail, localAvatarPath
+              //       // sean variables de estado de ProfileScreen si quieres que se actualicen en vivo.
+              //       // Por ahora, ProfileScreen es StatelessWidget, así que esto es más complejo.
+              //       // print("Datos actualizados recibidos: $updatedData");
+              //     });
+              //   }
+              // });
+            },
+          ),
+          _buildProfileOptionCard(
+            context: context,
+            icon: Icons.receipt_long_outlined,
+            title: 'Mis Pedidos',
+            onTap: () {
+              // TODO: Navegar a pantalla de historial de pedidos
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Navegar a Mis Pedidos (pendiente)')),
+              );
+            },
+          ),
+          _buildProfileOptionCard(
+            context: context,
+            icon: Icons.location_on_outlined,
+            title: 'Direcciones Guardadas',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  // Si AddressesScreen necesita saber la dirección seleccionada en HomeScreen:
+                  // builder: (context) => AddressesScreen(initiallySelectedAddress: homeScreenSelectedAddress),
+                  // Por ahora, la mantenemos simple
+                  builder: (context) => AddressesScreen(),
+                ),
+              );
+              // No necesitamos manejar el resultado aquí si la selección es solo para HomeScreen
+            },
+          ),
+          const SizedBox(height: 20.0),
 
-            // --- 4. BOTÓN DE CERRAR SESIÓN ---
-            _buildLogoutButton(context, colorScheme),
-            const SizedBox(height: 20.0), // Espacio al final
+          // --- 3. SECCIÓN DE CONFIGURACIÓN Y AYUDA ---
+          _buildSectionTitle(context, "Aplicación", textTheme),
+          _buildProfileOptionCard(
+            context: context,
+            icon: Icons.settings_outlined,
+            title: 'Configuración',
+            onTap: () {
+              // TODO: Navegar a pantalla de configuración
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Navegar a Configuración (pendiente)')),
+              );
+            },
+          ),
+          _buildProfileOptionCard(
+            context: context,
+            icon: Icons.help_outline_rounded,
+            title: 'Centro de Ayuda',
+            onTap: () {
+              // TODO: Navegar a pantalla de ayuda
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Navegar a Ayuda (pendiente)')),
+              );
+            },
+          ),
+          const SizedBox(height: 30.0),
+
+          // --- 4. BOTÓN DE CERRAR SESIÓN ---
+          _buildLogoutButton(context, colorScheme),
+          const SizedBox(height: 20.0), // Espacio al final
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoggedOutView(
+    BuildContext context,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(30.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(Icons.person_off_outlined, size: 100, color: Colors.grey[400]),
+            SizedBox(height: 20),
+            Text(
+              'No has iniciado sesión',
+              style: textTheme.headlineSmall?.copyWith(color: Colors.grey[700]),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Inicia sesión o crea una cuenta para acceder a todas las funciones y personalizar tu experiencia.',
+              textAlign: TextAlign.center,
+              style: textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
+            ),
+            SizedBox(height: 30),
+            ElevatedButton.icon(
+              icon: Icon(Icons.login_rounded),
+              label: Text('Iniciar Sesión / Registrarse'),
+              onPressed: _navigateToLogin, // <--- NAVEGA A LOGIN SCREEN
+              style: ElevatedButton.styleFrom(
+                backgroundColor: colorScheme.primary,
+                foregroundColor: colorScheme.onPrimary,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                textStyle: textTheme.labelLarge?.copyWith(fontSize: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -305,45 +482,6 @@ class ProfileScreen extends StatelessWidget {
           ), // Para efecto ripple
         ),
       ),
-    );
-  }
-
-  Widget _buildLogoutButton(BuildContext context, ColorScheme colorScheme) {
-    // Reutilizamos _buildProfileOptionCard para consistencia, pero con estilo destructivo
-    return _buildProfileOptionCard(
-      context: context,
-      icon: Icons.logout_rounded,
-      title: 'Cerrar Sesión',
-      onTap: () {
-        // TODO: Implementar lógica de cierre de sesión
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text('Cerrar Sesión'),
-            content: Text('¿Estás seguro de que quieres cerrar sesión?'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('Cancelar'),
-                onPressed: () => Navigator.of(ctx).pop(),
-              ),
-              TextButton(
-                child: Text(
-                  'Sí, Cerrar Sesión',
-                  style: TextStyle(color: colorScheme.error),
-                ),
-                onPressed: () {
-                  Navigator.of(ctx).pop(); // Cierra el diálogo
-                  // Aquí iría la lógica real de logout
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Cerrando sesión... (pendiente)')),
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-      isDestructive: true, // Esto aplicará los colores de error
     );
   }
 }
